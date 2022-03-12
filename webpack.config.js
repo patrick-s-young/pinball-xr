@@ -10,6 +10,11 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
+  resolve: {
+    alias: {
+      cannon: path.resolve(__dirname, 'src/cannon')
+    }
+  },
   module: {
     rules: [
       {

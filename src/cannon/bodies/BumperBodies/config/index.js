@@ -1,15 +1,18 @@
 import * as CANNON from 'cannon-es';
-import { bumperMaterial } from '../../../cannonMaterials';
+import { bumperMaterial } from '../../../materials';
 import { quaternionPlayfieldSlope } from '../../../constants';
+import { bumperCollisionHandler, COLLISION_GROUPS } from 'cannon/collisions';
 
 export const BUMPER_CONFIG = {
+  collisionFilterGroup: COLLISION_GROUPS.PLAYFIELD,
+  material: bumperMaterial,
+  bumperCollisionHandler,
   shapeProps: {
     radiusTop: 0.75,
     radiusBottom: 0.75,
     height: 1,
     numSegments: 12
   },
-  material: bumperMaterial,
   computeShape: (props) => new CANNON.Cylinder(
     props.radiusTop, 
     props.radiusBottom, 
@@ -18,23 +21,23 @@ export const BUMPER_CONFIG = {
   ),
   locations: [    
     {
-      description: 'Bumper 2',
-      offset: new CANNON.Vec3(0, 0.5, -1.5),
+      bumperName: 'top_center_bumper',
+      offset: new CANNON.Vec3(0, 0.5, -5) ,
       quaternion: quaternionPlayfieldSlope
     },
     {
-      description: 'Bumper 3',
-      offset: new CANNON.Vec3(1, 0.5, -3) ,
+      bumperName: 'upper_left_bumper',
+      offset: new CANNON.Vec3(-2, 0.5, -3),
       quaternion: quaternionPlayfieldSlope
     },
     {
-      description: 'Bumper 7',
+      bumperName: 'upper_right_bumper',
+      offset: new CANNON.Vec3(2, 0.5, -  3),
+      quaternion: quaternionPlayfieldSlope
+    },
+    {
+      bumperName: 'lower_right_bumper',
       offset: new CANNON.Vec3(2, 0.5, 2 ),
-      quaternion: quaternionPlayfieldSlope
-    },
-    {
-      description: 'Bumper 8',
-      offset: new CANNON.Vec3(-2.75, 0.5, 3),
       quaternion: quaternionPlayfieldSlope
     }
   ]

@@ -1,33 +1,36 @@
 import * as CANNON from 'cannon-es'
-import { BUMPER_CONFIG } from './configs';
-import { bumperCollisionHandler } from '../../collisionHandlers';
-import { COLLISION_GROUPS } from '../../constants';
+import { BUMPER_CONFIG } from './config';
 
 export const BumperBodies = (props) => {
   const { world } = props;
+  const bumperBodies = {};
   const {
     shapeProps,
     material,
     locations,
-    collisionHandlers,
+    mass,
+    collisionFilterGroup,
+    bumperCollisionHandler,
     computeShape } = BUMPER_CONFIG;
+
   locations.forEach(location => {
     const {
-      collisonHandler,
+      bumperName,
       offset,
       quaternion } = location;
     const bumperShape = computeShape(shapeProps);
     const bumperBody = new CANNON.Body({
-      mass: 0, 
-      material: material,
-      collisionFilterGroup: COLLISION_GROUPS.PLAYFIELD
+      mass, 
+      material,
+      collisionFilterGroup
       }
     );
     bumperBody.addShape(bumperShape, offset);
     bumperBody.quaternion.copy(quaternion);
     bumperBody.addEventListener('collide', bumperCollisionHandler);
     world.addBody(bumperBody);
+    bumperBodies[bumperName] = bumperBody;
   })
 
-  return 1;
+  return bumperBodies;
 }

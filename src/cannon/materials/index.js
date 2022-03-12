@@ -7,30 +7,30 @@ export const playFieldMaterial = new CANNON.Material('playfield');
 
 export const initContactMaterials = ({ world }) => {
 // BALL & PLAYFIELD
-  const slipperyContact = new CANNON.ContactMaterial(
+  const ballAndPlayfield = new CANNON.ContactMaterial(
     playFieldMaterial, 
     ballMaterial, {
-    friction: 0.0,
+    friction: 0.1,
     restitution: 0.1
     }
   );
-  world.addContactMaterial(slipperyContact);
+  world.addContactMaterial(ballAndPlayfield);
 // BALL & BUMPER
-  const bumperContact = new CANNON.ContactMaterial(
+  const ballAndBumper = new CANNON.ContactMaterial(
     ballMaterial,
     bumperMaterial, {
     friction: 0.0,
-    restitution: 0.1
+    restitution: 0.5
     }
   );
-  world.addContactMaterial(bumperContact);
-//  BALL & FLIPPER
-  const flipperContact = new CANNON.ContactMaterial(
+  world.addContactMaterial(ballAndBumper);
+// BALL & FLIPPER
+  const ballAndFlipper = new CANNON.ContactMaterial(
     ballMaterial,
     flipperMaterial, {
-    friction: 0.4,
-    restitution: 0.8
+      friction: 0.1,
+      restitution: 0.5
     }
   );
-  world.addContactMaterial(flipperContact);
+  world.addContactMaterial(ballAndFlipper)
 }
