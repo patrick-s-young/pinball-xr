@@ -27,10 +27,8 @@ KeyEvents.prototype.addSubscriber = function ({
 }
 
 KeyEvents.prototype.onKeyDown = function ({ code:keyName }) {
-
   if (this.subscribers.keydown[keyName] === undefined) return;
   if (this.keyState[keyName] === 'keydown') return;
-  console.log('this.keyState[keyName]:', this.keyState[keyName])
   this.subscribers.keydown[keyName].forEach(callBack => callBack());
   this.keyState[keyName] = 'keydown';
 }
@@ -39,7 +37,6 @@ KeyEvents.prototype.onKeyUp = function ({ code:keyName }) {
   if (this.subscribers.keyup[keyName] === undefined) return;
   this.subscribers.keyup[keyName].forEach(callBack => callBack());
   this.keyState[keyName] = 'keyup';
-  console.log('this.keyState[keyName]:', this.keyState[keyName])
 }
 
 export default KeyEvents;

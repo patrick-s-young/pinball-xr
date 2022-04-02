@@ -1,16 +1,17 @@
 import * as CANNON from 'cannon-es';
-
-//import { flipperCollisionHandler } from '../../collisions';
+import { flipperMaterial } from '../../materials/index';
 
 function Flipper ({
   world
   }) {
   this.body = this.createBody({ world });
 // ANIMATION
+  this.step = this.step.bind(this);
   this.animation = this.createAnimation();
+  this.isAnimating = false;
   this.animationFrame = null;
   this.animationDirection = 1;
-  this.animationStopAfterFrame = this.animation.length - 1;
+  this.animationStopAfterFrame = null;
 // INPUT EVENTS
   this.onFlipperUp = this.onFlipperUp.bind(this);
   this.onFlipperDown = this.onFlipperDown.bind(this);
@@ -21,7 +22,7 @@ function Flipper ({
 }
 
 Flipper.prototype.collisionHandler = function (e) {
-// to do: take into account velocity of ball before contact
+ // if (this.isAnimating === false) return;
 // to do: throttle collision events for 100 milliseconds after contact
 // to do: switch over to physics when ball is on unmoving flipper 'isTrigger true/false'
   const { body, target } = {...e};
@@ -34,11 +35,10 @@ Flipper.prototype.collisionHandler = function (e) {
 // MAGNITUDE OF BALL VECTOR (velocity of ball along x and z axis)
   const ballMagnitude = getBallMagnitude(body); 
 
-
   const angleBetween = Math.acos(flipperUnitVec.dot(ballUnitVec));
   const xDirection = flipperUnitVec.z < 0 ? 1 : -1;
   e.body.velocity.x = Math.cos(angleBetween / 2) * this.maxVelocity * xDirection * flipperMagnitude;
-  e.body.velocity.z = Math.sin(angleBetween / 2) * this.maxVelocity * -flipperMagnitude;
+  e.body.velocity.z = Math.sin(angleBetween / 2) * this.maxVelocity * -(flipperMagnitude + ballMagnitude.z);
   
 // ANGLE OF FLIPPER VECTOR 
   function getFlipperUnitVec (ballUnitVec) {
@@ -62,14 +62,11 @@ Flipper.prototype.collisionHandler = function (e) {
     
 // GET DISTANCE BETWEEN CURRENT X, Z POSTION AND PREVIOUS POSITION 
   function getBallMagnitude ({ position, previousPosition }) {
-    console.log('currentPos', position)
-    console.log('previousPos', previousPosition);
-    //const diff = new CANNON.Vec3(position.x - previousPosition.x, position.y - previousPosition.y, position.z - previousPosition.z);
-    //console.log('diff', diff)
+    return new CANNON.Vec3(position.x - previousPosition.x, position.y - previousPosition.y, position.z - previousPosition.z);
   }
 // GET DISTANCE BETWEEN BALL CONTACT AND FLIPPER PIVOT POINT
   function getFlipperMagnitude () {
-    const { quaternion, previousQuaternion } = e.target;
+    const { quaternion, previousQuaternion } = target;
     if (quaternion.y === previousQuaternion.y) return 0.1;
     const flipperContactDistanceFromPivot = Math.sqrt(Math.pow(e.body.position.x - e.target.position.x, 2) +
                                                       Math.pow(e.body.position.y - e.target.position.y, 2));
@@ -79,21 +76,28 @@ Flipper.prototype.collisionHandler = function (e) {
 }
 
 Flipper.prototype.onFlipperUp = function () {
+  this.isAnimating = true;
   this.animationFrame = 0;
   this.animationDirection = 1;
   this.animationStopAfterFrame = this.animation.length - 1;
+  
 }
 
 Flipper.prototype.onFlipperDown = function () {
+  this.isAnimating = true;
   this.animationFrame = this.animation.length - 1;
   this.animationDirection = -1;
   this.animationStopAfterFrame = 0;
 }
 
 Flipper.prototype.step = function () {
-  if (this.animationFrame === null) return;
+  if (this.isAnimating === false) return; 
   this.body.quaternion.copy(this.animation[this.animationFrame]);
-  this.animationFrame = this.animationFrame === this.animationStopAfterFrame ? null : this.animationFrame += this.animationDirection;
+  if (this.animationFrame === this.animationStopAfterFrame) {
+    this.isAnimating = false;
+  } else {
+    this.animationFrame += this.animationDirection;
+  }
 }
 
 Flipper.prototype.createBody = function ({ world }) {
@@ -126,3 +130,5 @@ Flipper.prototype.createAnimation = function () {
 }
 
 export default Flipper;
+
+
