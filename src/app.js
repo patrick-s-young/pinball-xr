@@ -31,7 +31,7 @@ floorBody.quaternion.copy(quat);
 
 // BALL
 const ballShape = new CANNON.Sphere(.25);
-const ballBody = new CANNON.Body({ mass: 10, position: new CANNON.Vec3(Math.random() * 3.5, 2, -3) });
+const ballBody = new CANNON.Body({ mass: 10, position: new CANNON.Vec3(Math.random() * 2.25 + 1, 2, -4) });
 ballBody.addShape(ballShape);
 world.addBody(ballBody);
 
