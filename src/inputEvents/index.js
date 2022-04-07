@@ -1,5 +1,4 @@
-// to do: make function prototype that throttles keyDown messages.
-
+// SUBSCRIBE TO KEYBOARD INPUTS
 function KeyEvents () {
   this.subscribers = {
     keydown: {},
