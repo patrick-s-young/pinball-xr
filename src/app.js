@@ -23,25 +23,29 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 // ADD TEST FLOOR
-const floorShape = new CANNON.Box(new CANNON.Vec3(5, .25, 5));
+const floorShape = new CANNON.Box(new CANNON.Vec3(6, .25, 8));
 const floorBody = new CANNON.Body({
   mass: 0,
-  position: new CANNON.Vec3(0, -.25, 0)
+  position: new CANNON.Vec3(0, -.25, -6)
 });
-floorBody.addShape(floorShape, new CANNON.Vec3(2, 0, -4));
+floorBody.addShape(floorShape, new CANNON.Vec3(0, 0, 0));
 world.addBody(floorBody);
 let quat = new CANNON.Quaternion();
 quat.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 3);
 floorBody.quaternion.copy(quat);
 // ADD BALL
 const ballShape = new CANNON.Sphere(.25);
-const ballBody = new CANNON.Body({ mass: 10, position: new CANNON.Vec3(Math.random() * 2.25 + 3, 2, -6) });
-ballBody.velocity.x = -2;
+const ballBody = new CANNON.Body({ 
+  mass: 10, 
+  position: new CANNON.Vec3(0, 2, -6) 
+});
+ballBody.velocity.x = 1 + Math.random() * 2;
 ballBody.velocity.z = 4;
 ballBody.addShape(ballShape);
 world.addBody(ballBody);
-// ADD LEFT FLIPPER 
-const leftFlipper = new Flipper({ world, ballRef: ballBody });
+// ADD FLIPPERS 
+const leftFlipper = new Flipper({ name: 'leftFlipper',  world, ballRef: ballBody });
+const rightFlipper = new Flipper({ name: 'rightFlipper',  world, ballRef: ballBody });
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -62,6 +66,16 @@ keyEvents.addSubscriber({
   keyAction: 'keyup', 
   callBack: leftFlipper.onFlipperDown
   });
+keyEvents.addSubscriber({
+  keyName: 'KeyL',
+  keyAction: 'keydown',
+  callBack: rightFlipper.onFlipperUp
+  });
+keyEvents.addSubscriber({
+  keyName: 'KeyL',
+  keyAction: 'keyup',
+  callBack: rightFlipper.onFlipperDown
+  });
 // INIT ANIMATION VALUES
 const clock = new THREE.Clock();
 let delta;
@@ -72,7 +86,8 @@ function animate() {
   stats.begin();
   controls.update();
   cannonDebugger.update();
-  leftFlipper.step(ballBody);
+  leftFlipper.step();
+  rightFlipper.step();
   delta = Math.min(clock.getDelta(), 0.1)
   world.step(timeStep, delta, maxSubSteps);   
   renderer.render(scene, camera)

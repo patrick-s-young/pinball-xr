@@ -2,17 +2,29 @@ import * as CANNON from 'cannon-es';
 
 function Flipper ({
   world,
-  ballRef
+  ballRef,
+  name,
   }) {
+  this.name = name;
 // PINBALL POSITION AND SIZE
   this.ballRef = ballRef;
   this.ballRadius= ballRef.shapes[0].radius;
 // CREATE CANNON BODY  
   this.flipperLengthFromPivot = 3.5;
-  this.flipperPos = new CANNON.Vec3(0, 0.6, 0);
+  this.shapeOffset = new CANNON.Vec3(1.5, 0, 0)
+  this.flipperPos = new CANNON.Vec3(-4, 0.6, -1);
+  if (name === 'rightFlipper') {
+    this.flipperPos = new CANNON.Vec3(4, 0.6, -1);
+  }
   this.body = null;
   this.createBody = this.createBody.bind(this);
 // ANIMATION
+  this.startRadian = -Math.PI/6;
+  this.endRadian = Math.PI/4;
+  if (name === 'rightFlipper') {
+    this.startRadian = Math.PI + Math.PI/6;
+    this.endRadian = Math.PI - Math.PI/4;
+  }
   this.step = this.step.bind(this);
   this.animation = null;
   this.isAnimating = false;
@@ -25,6 +37,10 @@ function Flipper ({
   this.onFlipperDown = this.onFlipperDown.bind(this);
 // COLLISION PREDICTION
   this.maxVelocity = 50;
+  this.rightFlipperAngleAdjust = 0;
+  if (name === 'rightFlipper') {
+    this.rightFlipperAngleAdjust = Math.PI;
+  }
   this.hitAreas = {};
   this.collisionFrame = null;
   this.collisionFrame = { frameNumber: null, ballVelocity: {}};
@@ -50,7 +66,8 @@ Flipper.prototype.onFlipperDown = function () {
 }
 
 // REQUEST ANIM FRAME LOOP
-Flipper.prototype.step = function ({ position, previousPosition }) {
+Flipper.prototype.step = function () {
+  const { position, previousPosition } = this.ballRef;
   if (this.isAnimating === false) return; 
 // BEGIN FRAME
   this.animationFrame += this.animationDirection;
@@ -61,6 +78,7 @@ Flipper.prototype.step = function ({ position, previousPosition }) {
     console.log('this.collisionFrame', this.collisionFrame)
     console.log('this.collisionFrame.velocity', this.collisionFrame.velocity);
     this.ballRef.velocity.set(...Object.values(this.collisionFrame.velocity));
+    this.collisionFrame === -1;
   }
 // CHECK IF LAST ANIMATION FRAME HAS BEEN RENDERED
   if (this.animationFrame === this.animationStopAfterFrame) {
@@ -69,35 +87,34 @@ Flipper.prototype.step = function ({ position, previousPosition }) {
 }
 
 
-Flipper.prototype.createBody = function ({ world }) {
+Flipper.prototype.createBody = function ({ world }) {length
   const shape = new CANNON.Box(new CANNON.Vec3(2, 0.4, 0.1));
   const body = new CANNON.Body({
     mass: 0,
     isTrigger: true,
     position: this.flipperPos
   });
-  body.addShape(shape, new CANNON.Vec3(1.5, 0, 0));
+  body.addShape(shape, this.shapeOffset);
   world.addBody(body);
   this.body = body;
 }
 
 Flipper.prototype.createAnimation = function () {
   const quat = new CANNON.Quaternion();
-  quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), -Math.PI/6);
+  quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), this.startRadian);
   this.body.quaternion.copy(quat);
-  const startRadian = -Math.PI/6;
-  const endRadian = Math.PI/4;
   const animSteps = 4;
-  const increment = (Math.abs(startRadian) + endRadian) / animSteps;
+  const increment = (this.endRadian - this.startRadian) / animSteps;
   const rotationAnim = [];
   const flipperAngles = []
-  for (let r = startRadian; r < endRadian; r += increment) {
-    const adjustedForFlipperWidth = 0.01;
-    flipperAngles.push(r + adjustedForFlipperWidth);
+  for (let frame = 0; frame <= animSteps; frame++) {
+    const flipperAngle = this.startRadian + frame * increment;
+    flipperAngles.push(flipperAngle);
     const quat = new CANNON.Quaternion();
-    quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), r);
+    quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), flipperAngle);
     rotationAnim.push(quat);
   }
+
   this.hitAreas = flipperAngles.map((angle, idx) => {
     const hitArea = { min: null, max: null, minDegrees: null, maxDegrees: null };
     if (idx > 0) {
@@ -109,6 +126,7 @@ Flipper.prototype.createAnimation = function () {
     return hitArea;
   })
   this.animation = rotationAnim;
+  if (this.name === 'rightFlipper') console.log('rightFlipper hitAreas', this.hitAreas)
 }
 
 Flipper.prototype.getCollisionFrame = function () {
@@ -125,32 +143,56 @@ Flipper.prototype.getCollisionFrame = function () {
     const ballx = ballPos.x - frame * ballPosDiff.x;
     const ballz = ballPos.z - frame * ballPosDiff.z;
 // HYPOTENUSE OF BALL CENTER TO FLIPPER PIVOT
-    const distanceFromCenter = Math.sqrt(Math.pow(ballx, 2) + Math.pow(ballz, 2));
+    const distanceFromCenter = Math.sqrt(Math.pow(ballx - this.flipperPos.x, 2) + Math.pow(ballz - this.flipperPos.z, 2));
     if (distanceFromCenter > this.flipperLengthFromPivot) continue;
 // ANGLE BETWEEN BALL CENTER AND FLIPPER PIVOT
-    const angleFromCenter = -Math.atan(ballz/ballx);
+    const angleFromCenter = this.name === 'leftFlipper' ? 
+      -Math.atan((ballz - this.flipperPos.z)/(ballx - this.flipperPos.x))
+      : Math.PI - Math.atan((ballz - this.flipperPos.z)/(ballx - this.flipperPos.x)) 
 // ANGLE BETWEEN BALL CENTER, FLIPPER PIVOT, AND BALL CONTACT POINT
     const angleBetweenCenterAndContactPoint = Math.asin(this.ballRadius/distanceFromCenter);
 // TARGET FLIPPER ANGLE FOR HIT AREA TEST
-    const targetAngleForHitAreaTest = angleFromCenter - angleBetweenCenterAndContactPoint;
+console.log(`angleFromCenter: ${radToDeg(angleFromCenter)}, angleBetweenCenterAndContactPoint: ${radToDeg(angleBetweenCenterAndContactPoint)}`)
+    const targetAngleForHitAreaTest = this.name === 'leftFlipper' 
+      ? angleFromCenter - angleBetweenCenterAndContactPoint
+      : angleFromCenter + angleBetweenCenterAndContactPoint
+console.log('targetAngleForHitAreaTest', radToDeg(targetAngleForHitAreaTest))
     const { min, max } = this.hitAreas[frame];
 console.log('')
-console.log(`frame ${frame}: test if ${targetAngleForHitAreaTest} < ${min} || ${targetAngleForHitAreaTest} > ${max}`)
+console.log(`frame ${frame}: test if ${radToDeg(targetAngleForHitAreaTest)} < ${min * 180/Math.PI} || ${targetAngleForHitAreaTest * 180/Math.PI} > ${max * 180/Math.PI}`)
+
+  let velocity;
+  if (this.name === 'leftFlipper') {
     if (targetAngleForHitAreaTest < min || targetAngleForHitAreaTest > max ) continue;
     const tangentVelocity = {
       x: -Math.sin(targetAngleForHitAreaTest),
       z: -Math.cos(targetAngleForHitAreaTest)
     }
-
-console.log('*****tangentVelocity', tangentVelocity)
-console.log('')
-
+    console.log('*****tangentVelocity', tangentVelocity)
+    console.log('')
     const flipperMagnitude = distanceFromCenter / this.flipperLengthFromPivot;
-    const velocity = new CANNON.Vec3(
+    velocity = new CANNON.Vec3(
       tangentVelocity.x * this.maxVelocity * flipperMagnitude,
       -ballPosDiff.y,
       tangentVelocity.z * this.maxVelocity * flipperMagnitude
-  ) ;
+    );
+  }
+
+  if (this.name === 'rightFlipper') {
+    if (targetAngleForHitAreaTest > min || targetAngleForHitAreaTest < max ) continue;
+    const tangentVelocity = {
+      x: Math.sin(targetAngleForHitAreaTest),
+      z: Math.cos(targetAngleForHitAreaTest)
+    }
+    console.log('*****tangentVelocity', tangentVelocity)
+    console.log('')
+    const flipperMagnitude = distanceFromCenter / this.flipperLengthFromPivot;
+    velocity = new CANNON.Vec3(
+      tangentVelocity.x * this.maxVelocity * flipperMagnitude,
+      -ballPosDiff.y,
+      tangentVelocity.z * this.maxVelocity * flipperMagnitude
+    );
+  }
 
     this.collisionFrame = {
       frame,
@@ -162,3 +204,4 @@ console.log('')
 
 export default Flipper;
 
+const radToDeg = (rad) => rad * 180/Math.PI;
