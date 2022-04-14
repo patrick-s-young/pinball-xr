@@ -3,7 +3,7 @@ import * as CANNON from 'cannon-es';
 export const COLLISION_GROUPS = {
   BALL: 1,
   PLAYFIELD: 2,
-  TRIGGERS: 4
+  FLIPPER: 4
 }
 
 
