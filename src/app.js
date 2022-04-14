@@ -37,10 +37,10 @@ floorBody.quaternion.copy(quat);
 const ballShape = new CANNON.Sphere(.25);
 const ballBody = new CANNON.Body({ 
   mass: 10, 
-  position: new CANNON.Vec3(0, 2, -6) 
+  position: new CANNON.Vec3(-5, 2, -8) 
 });
-ballBody.velocity.x = 1 + Math.random() * 2;
-ballBody.velocity.z = 4;
+ballBody.velocity.x = 2 + Math.random() * 1.25;
+ballBody.velocity.z = 6;
 ballBody.addShape(ballShape);
 world.addBody(ballBody);
 // ADD FLIPPERS 

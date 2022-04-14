@@ -8,5 +8,5 @@ export const BALL_CONFIG = {
   position: new CANNON.Vec3(4.75, 0.1, 9),
   material: ballMaterial,
   collisionFilterGroup: COLLISION_GROUPS.BALL,
-  collisionFilterMask: COLLISION_GROUPS.PLAYFIELD
+  collisionFilterMask: COLLISION_GROUPS.PLAYFIELD | COLLISION_GROUPS.FLIPPER
 }
