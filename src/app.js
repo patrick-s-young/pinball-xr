@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import CannonDebugger from 'cannon-es-debugger';
 import Stats from 'stats.js';
 // Objects
-import Flipper from './cannon/objects/Flipper';
+import { WedgeFlipper } from './cannon/objects/WedgeFlipper';
 import KeyEvents from './inputEvents';
 
 
@@ -44,8 +44,8 @@ ballBody.velocity.z = 6;
 ballBody.addShape(ballShape);
 world.addBody(ballBody);
 // ADD FLIPPERS 
-const leftFlipper = new Flipper({ name: 'leftFlipper',  world, ballRef: ballBody });
-const rightFlipper = new Flipper({ name: 'rightFlipper',  world, ballRef: ballBody });
+const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ballBody });
+const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ballBody });
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);
 const controls = new OrbitControls(camera, renderer.domElement);
