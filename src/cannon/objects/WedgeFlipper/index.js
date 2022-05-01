@@ -1,7 +1,7 @@
 import * as CANNON from 'cannon-es';
 import { initFlipper } from './configs';
 
-function Flipper ({
+export function WedgeFlipper ({
   world,
   ballRef,
   side
@@ -18,6 +18,8 @@ function Flipper ({
   this.flipperState = initFlipper.SET_FLIPPER_STATE({ side });
 // STEP STATE
   this.stepState = initFlipper.SET_STEP_STATE();
+// GET COLLISION FRAME HELPERS
+  this.getFlipperAngleOfContact = initFlipper.GET_FLIPPER_ANGLE_OF_CONTACT;
 // COLLISION STATE
   this.collisionState = initFlipper.SET_COLLISION_STATE({ side });
 // CREATE ANIMATION & DEFINE HIT AREAS
@@ -28,10 +30,12 @@ function Flipper ({
   this.body = initFlipper.CREATE_BODY({ world, side });
 // STATIC FLIPPER COLLISION HANDLER
   this.body.addEventListener('collide', this.collisionHandler(this.flipperState));
+// ANGLE OF FLIPPER AT REST
+  this.body.quaternion.copy(this.animation[0]);
 }
 
 
-Flipper.prototype.collisionHandler = (flipperStateRef) => {
+WedgeFlipper.prototype.collisionHandler = (flipperStateRef) => {
   return (e) => {
 // IF FLIPPER IS ANIMATING, DO NOTHING
     if (flipperStateRef.isAnimating === true) return;
@@ -44,7 +48,6 @@ Flipper.prototype.collisionHandler = (flipperStateRef) => {
     ballPos.vsub(ballPrevPos, ballPosDiff);
     const ballUnitVec = new CANNON.Vec3(); // ballUnitVec not used
     ballPosDiff.unit(ballUnitVec);
-    console.log('ball.velocity+++', ball.velocity);
 // IF BALL IS MOVING AWAY FROM FLIPPER, DO NOTHING
     if (ball.velocity.z < 0) return;
 // GET THE TANGENT VECTOR OF THE CURRENT FLIPPER ORIENTATION - 'UP' OR 'DOWN'
@@ -64,7 +67,7 @@ Flipper.prototype.collisionHandler = (flipperStateRef) => {
 }
 
 
-Flipper.prototype.onFlipperUp = function () {
+WedgeFlipper.prototype.onFlipperUp = function () {
   this.getCollisionFrame();
   this.flipperState.isAnimating = true;
   this.flipperState.orientation = 'up';
@@ -73,7 +76,7 @@ Flipper.prototype.onFlipperUp = function () {
   this.stepState.endFrame = this.animation.length - 1;
 }
 
-Flipper.prototype.onFlipperDown = function () {
+WedgeFlipper.prototype.onFlipperDown = function () {
   this.flipperState.isAnimating = true;
   this.flipperState.orientation = 'down';
   this.stepState.frame = this.animation.length - 1;
@@ -83,7 +86,7 @@ Flipper.prototype.onFlipperDown = function () {
 
 
 // REQUEST ANIM FRAME LOOP
-Flipper.prototype.step = function () {
+WedgeFlipper.prototype.step = function () {
   if (this.flipperState.isAnimating === false) return; 
   const { position, previousPosition } = this.ballState.ref;
 // BEGIN FRAME
@@ -102,8 +105,85 @@ Flipper.prototype.step = function () {
 }
 
 
-Flipper.prototype.getCollisionFrame = function () {
-   this.collisionState.impact = { frame: -1 };
+WedgeFlipper.prototype.getCollisionFrame = function () {
+  this.collisionState.impact = { frame: -1 };
+  const { position, previousPosition } = this.ballState.ref;
+  const ballPrevPos = new CANNON.Vec3(...Object.values(previousPosition));
+  const ballPos = new CANNON.Vec3(...Object.values(position));
+  const ballPosDiff = new CANNON.Vec3();
+  ballPos.vsub(ballPrevPos, ballPosDiff);
+  const ballUnitVec = new CANNON.Vec3(); // ballUnitVec not used
+  ballPosDiff.unit(ballUnitVec);
+
+  for (let frame = 1; frame < this.hitAreas.length; frame++) {
+    const ballx = ballPos.x - frame * ballPosDiff.x;
+    const ballz = ballPos.z - frame * ballPosDiff.z;
+    const { flipperRotationAtPointOfContact, 
+            flipperAngleOfContact, 
+             distanceFromCenter
+          } = this.getFlipperAngleOfContact({
+      ball: {
+        radius: this.ballState.radius,
+        position: {
+            x: ballx,
+            z: ballz
+          }
+      },
+      flipper: {
+        wedgeSlope: Math.atan(0.5 / 4),
+        wedgeBaseHeight: 0.5,
+        length: this.collisionState.flipperLengthFromPivot,
+        axis: {
+          x: this.collisionState.position.x,
+          z: this.collisionState.position.z,
+        }
+      },
+      side: this.collisionState.side
+    }
+    );
+    if (distanceFromCenter > this.collisionState.flipperLengthFromPivot) continue;
+console.log('flipperAngleOfContact', flipperAngleOfContact)
+    const { min, max } = this.hitAreas[frame];
+    let velocity;
+    if (this.collisionState.side === 'left') {
+      if (flipperRotationAtPointOfContact < min || flipperRotationAtPointOfContact > max ) continue;
+      const tangentVelocity = {
+        x: -Math.sin(flipperAngleOfContact),
+        z: -Math.cos(flipperAngleOfContact)
+      }
+      const flipperMagnitude = distanceFromCenter / this.collisionState.flipperLengthFromPivot;
+      velocity = new CANNON.Vec3(
+        tangentVelocity.x *  this.collisionState.maxVelocity * flipperMagnitude,
+        -ballPosDiff.y,
+        tangentVelocity.z *  this.collisionState.maxVelocity * flipperMagnitude
+      );
+    }
+
+    if (this.collisionState.side === 'right') {
+      if (flipperRotationAtPointOfContact > min || flipperRotationAtPointOfContact < max ) continue;
+      const tangentVelocity = {
+        x: Math.sin(flipperRotationAtPointOfContact),
+        z: Math.cos(flipperRotationAtPointOfContact)
+      }
+      const flipperMagnitude = distanceFromCenter / this.collisionState.flipperLengthFromPivot;
+      velocity = new CANNON.Vec3(
+        tangentVelocity.x *  this.collisionState.maxVelocity * flipperMagnitude,
+        -ballPosDiff.y,
+        tangentVelocity.z *  this.collisionState.maxVelocity * flipperMagnitude
+      );
+    }
+
+     this.collisionState.impact = {
+      frame,
+      velocity
+    }
+    break;
+  }
+  console.log('collisionFrame', this.collisionState.impact)
+}
+
+WedgeFlipper.prototype.getCollisionFrame2 = function () {
+  this.collisionState.impact = { frame: -1 };
   const { position, previousPosition } = this.ballState.ref;
   const ballPrevPos = new CANNON.Vec3(...Object.values(previousPosition));
   const ballPos = new CANNON.Vec3(...Object.values(position));
@@ -124,6 +204,17 @@ Flipper.prototype.getCollisionFrame = function () {
       : Math.PI - Math.atan((ballz - this.collisionState.position.z)/(ballx - this.collisionState.position.x)) 
 // ANGLE BETWEEN BALL CENTER, FLIPPER PIVOT, AND BALL CONTACT POINT
     const angleBetweenCenterAndContactPoint = Math.asin(this.ballState.radius/distanceFromCenter);
+// CONTACT DISTANCE
+    const contactDistance = Math.abs(this.ball.radius/Math.sin(angleBetweenCenterAndContactPoint));
+// SLOPE HEIGHT
+    const slopeHeight = (this.collisionState.flipperLengthFromPivot - contactDistance) / this.collisionState.flipperLengthFromPivot * 0.5;
+// FLIPPER CENTER ANGLE
+    const flipperCenterAngle = -Math.asin(slopeHeight/contactDistance) + angleBetweenCenterAndContactPoint;
+// FLIPPER CONTACT ANGLE (DIRECTION OF VELOCITY)
+    const wedgeAngle = Math.atan(0.5/this.collisionState.flipperLengthFromPivot);
+    const flipperWedgeContactAngle = flipperCenterAngle - wedgeAngle;
+
+    
 // TARGET FLIPPER ANGLE FOR HIT AREA TEST
     const targetAngleForHitAreaTest = this.collisionState.side === 'left' 
       ? angleFromCenter - angleBetweenCenterAndContactPoint
@@ -167,7 +258,5 @@ Flipper.prototype.getCollisionFrame = function () {
   }
   console.log('collisionFrame', this.collisionState.impact)
 }
-
-export default Flipper;
 
 const radToDeg = (rad) => rad * 180/Math.PI;
