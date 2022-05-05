@@ -1,8 +1,7 @@
 import * as CANNON from 'cannon-es'
 import { BUMPER_CONFIG } from './config';
 
-export const BumperBodies = (props) => {
-  const { world } = props;
+export const Bumper = ({ world }) => {
   const bumperBodies = {};
   const {
     shapeProps,
