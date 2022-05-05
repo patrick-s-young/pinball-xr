@@ -3,6 +3,7 @@ import { bumperMaterial } from '../../../materials';
 import { quaternionPlayfieldSlope } from '../../../constants';
 import { bumperCollisionHandler, COLLISION_GROUPS } from 'cannon/collisions';
 
+const bodyOffsetX = 0.45; 
 export const BUMPER_CONFIG = {
   collisionFilterGroup: COLLISION_GROUPS.PLAYFIELD,
   material: bumperMaterial,
@@ -21,23 +22,18 @@ export const BUMPER_CONFIG = {
   ),
   locations: [    
     {
-      bumperName: 'top_center_bumper',
-      offset: new CANNON.Vec3(0, 0.5, -5) ,
-      quaternion: quaternionPlayfieldSlope
-    },
-    {
       bumperName: 'upper_left_bumper',
-      offset: new CANNON.Vec3(-2, 0.5, -3),
+      offset: new CANNON.Vec3(-2 + bodyOffsetX, 0.5, -5),
       quaternion: quaternionPlayfieldSlope
     },
     {
       bumperName: 'upper_right_bumper',
-      offset: new CANNON.Vec3(2, 0.5, -  3),
+      offset: new CANNON.Vec3(2 + bodyOffsetX, 0.5, -5),
       quaternion: quaternionPlayfieldSlope
     },
     {
-      bumperName: 'lower_right_bumper',
-      offset: new CANNON.Vec3(2, 0.5, 2 ),
+      bumperName: 'lower_center_bumper',
+      offset: new CANNON.Vec3(0  + bodyOffsetX, 0.5, -2),
       quaternion: quaternionPlayfieldSlope
     }
   ]

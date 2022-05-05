@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import CannonDebugger from 'cannon-es-debugger';
 import Stats from 'stats.js';
 // Objects
-import { WedgeFlipper, Ball, Playfield } from './cannon/objects';
+import { WedgeFlipper, Ball, Playfield, Bumper } from './cannon/objects';
 import KeyEvents from './inputEvents';
 // Collison groups
 import { COLLISION_GROUPS } from './cannon/collisions';
@@ -16,6 +16,7 @@ import { COLLISION_GROUPS } from './cannon/collisions';
 const world = new CANNON.World();
 world.gravity.set(0, -30, 0);
 world.broadphase = new CANNON.NaiveBroadphase();
+
 // INIT THREE JS
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -23,14 +24,21 @@ camera.position.set(0, 15, 5);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
 // ADD PLAYFIELD
 const playField = new Playfield({ world });
+
+// ADD BUMPERS
+const bumpers = Bumper({ world });
+
 // ADD BALL
 const ball = new Ball({ world });
 ball.spawn();
+
 // ADD FLIPPERS 
 const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ball.bodyRef() });
 const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ball.bodyRef() });
+
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -39,6 +47,7 @@ stats.showPanel(0);
 document.body.appendChild(stats.dom);
 const axesHelper = new THREE.AxesHelper( 5 );
 scene.add( axesHelper );
+
 // KEYBOARD INPUT
 const keyEvents = new KeyEvents();
 keyEvents.addSubscriber({ 
@@ -61,6 +70,7 @@ keyEvents.addSubscriber({
   keyAction: 'keyup',
   callBack: rightFlipper.onFlipperDown
   });
+
 // INIT ANIMATION VALUES
 const clock = new THREE.Clock();
 let delta;
@@ -86,7 +96,8 @@ animate();
 
 
 // HELPERS
-window.addEventListener('resize', onWindowResize, false)
+window.addEventListener('resize', onWindowResize, false);
+
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
