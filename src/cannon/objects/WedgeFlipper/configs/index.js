@@ -1,55 +1,64 @@
 import * as CANNON from 'cannon-es';
 import { COLLISION_GROUPS } from '../../../collisions';
-import { CannonBox, CannonWedge } from '../../../shapes';
-
+import { CannonWedge } from '../../../shapes';
+import { createFlipperBody, getContactFrame } from '../helpers';
+import { PLAYFIELD_SLOPE_RADIANS } from '../../../constants';
 
 export const initFlipper = {
   flipperLengthFromPivot: 4,
-  maxVelocity: 90,
-// CREATE BODY 
-  position: {
-    left: new CANNON.Vec3(-4, 0.3, -1),
-    right: new CANNON.Vec3(4, 0.3, -1)
+  flipperHeight: 0.8,
+  wedgeBaseHeight: 0.5,
+  flipperOffsetZ: 7,
+  get playFieldSlopeOffsetY() { return  Math.sin(PLAYFIELD_SLOPE_RADIANS) * this.flipperOffsetZ},
+  get playFieldSlipeOffsetZ() { return  Math.cos(PLAYFIELD_SLOPE_RADIANS) * this.flipperOffsetZ},
+  get wedgeSlope() { return Math.atan(this.wedgeBaseHeight / this.flipperLengthFromPivot)},
+  maxVelocity: 60,
+  get axis() { return {
+    left: new CANNON.Vec3(-4, this.flipperHeight * 0.75 - this.playFieldSlopeOffsetY, this.flipperOffsetZ),
+    right: new CANNON.Vec3(4, this.flipperHeight * 0.75 - this.playFieldSlopeOffsetY, this.flipperOffsetZ)
+    }
   },
-  shape: CannonWedge({ widthX: 2, heightY: 0.4, depthZ: 0.5 }),
-  shapeOffset: new CANNON.Vec3(2, 0, 0),
-  CREATE_BODY ({ world, side }) {
-    console.log('CREAte Body')
-    const body = new CANNON.Body({
-      mass: 0,
-      isTrigger: true,
-      position: this.position[side],
-      collisionFilterGroup: COLLISION_GROUPS.FLIPPER
-    });
-    body.addShape(this.shape, this.shapeOffset);
-    world.addBody(body);
-    return body;
-  },
-// CREATE ANIMATION
+  get shape() { return CannonWedge({ widthX: this.flipperLengthFromPivot / 2, heightY: this.flipperHeight / 2, depthZ: this.wedgeBaseHeight / 2 }) },
+  get shapeOffset() { return new CANNON.Vec3(this.flipperLengthFromPivot / 2, 0, 0)},
   startRadian: {
     left: -Math.PI/6,
     right: Math.PI + Math.PI/6
   },
   endRadian : {
-    left: Math.PI/4,
-    right: Math.PI - Math.PI/4
+    left: Math.PI/7,
+    right: Math.PI - Math.PI/7
   },
   animSteps: 4,
+  CREATE_BODY ({ world, side }) {
+    return createFlipperBody({
+      world,
+      mass: 0,
+      isTrigger: true,
+      position: this.axis[side],
+      collisionFilterGroup: COLLISION_GROUPS.FLIPPER,
+      shape: this.shape,
+      shapeOffset: this.shapeOffset,
+    })
+  },
   CREATE_ANIMATION ({ side }) {
+    const playfieldSlope = new CANNON.Quaternion();
+    playfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 6);
+
     const startRadian = this.startRadian[side];
     const endRadian = this.endRadian[side];
     const quat = new CANNON.Quaternion();
     quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), startRadian);
-    //this.body.quaternion.copy(quat);
     const increment = (endRadian - startRadian) / this.animSteps;
     const animation = [];
     const flipperAngles = []
     for (let frame = 0; frame <= this.animSteps; frame++) {
       const flipperAngle = startRadian + frame * increment;
       flipperAngles.push(flipperAngle);
-      const quat = new CANNON.Quaternion();
-      quat.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), flipperAngle);
-      animation.push(quat);
+      const quatAnimStep = new CANNON.Quaternion();
+      quatAnimStep.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), flipperAngle);
+      const quatMult = new CANNON.Quaternion();
+      playfieldSlope.mult(quatAnimStep, quatMult);
+      animation.push(quatMult);
     }
     const hitAreas = flipperAngles.map((angle, idx) => {
       const hitArea = { min: null, max: null, minDegrees: null, maxDegrees: null };
@@ -92,7 +101,7 @@ export const initFlipper = {
   SET_COLLISION_STATE ({ side }) {
     return {
       side,
-      position: this.position[side],
+      axis: this.axis[side],
       flipperLengthFromPivot: this.flipperLengthFromPivot,
       maxVelocity: this.maxVelocity,
       impact: { frame: null, velocity: {}}
@@ -106,53 +115,17 @@ export const initFlipper = {
   },
   GET_FLIPPER_ANGLE_OF_CONTACT ({
     ball,
-    flipper,
     side
     }) {
-      const distance = {
-        pivotToBallCenter: undefined,
-        pivotToBallSurface: undefined,
-        wedgeCenterToBallSurface: undefined
-      }
-      const angle = {
-        pivotToBallCenter: undefined,
-        ballCenterToPivotToBallSurface: undefined,
-        ballSurfaceToPivotToWedgeCenter: undefined,
-        flipperRotationAtPointOfContact: undefined,
-        flipperAngleOfContact: undefined
-      }
-
-      // STEP 1
-        distance.pivotToBallCenter = Math.sqrt(Math.pow(ball.position.x - flipper.axis.x, 2) + Math.pow(ball.position.z - flipper.axis.z, 2));
-  console.log('STEP 1: distance.pivotToBallCenter', distance.pivotToBallCenter)
-      // STEP 2
-        angle.pivotToBallCenter = Math.atan((ball.position.z - flipper.axis.z) / (ball.position.x - flipper.axis.x));
-        if (side === 'right') angle.pivotToBallCenter += Math.PI;
-  console.log('STEP 2: angle.pivotToBallCenter', angle.pivotToBallCenter)
-      // STEP 3
-        angle.ballCenterToPivotToBallSurface = Math.atan(ball.radius / distance.pivotToBallCenter);
-  console.log('STEP 3: angle.ballCenterToPivotToBallSurface', angle.ballCenterToPivotToBallSurface)
-      // STEP 4
-        distance.pivotToBallSurface = Math.abs(ball.radius / Math.sin(angle.ballCenterToPivotToBallSurface));
-  console.log('STEP 4: distance.pivotToBallSurface ', distance.pivotToBallSurface )
-      // STEP 5
-        distance.wedgeCenterToBallSurface = (flipper.length - distance.pivotToBallSurface) / flipper.length * flipper.wedgeBaseHeight;
-  console.log('STEP 5: distance.wedgeCenterToBallSurface  ', distance.wedgeCenterToBallSurface)
-      // STEP 6
-        angle.ballSurfaceToPivotToWedgeCenter = Math.asin(distance.wedgeCenterToBallSurface / distance.pivotToBallSurface);
-  console.log('--angle.ballSurfaceToPivotToWedgeCenter ', angle.ballSurfaceToPivotToWedgeCenter )
-      // STEP 7
-        angle.flipperRotationAtPointOfContact = side === 'left' ?
-          angle.pivotToBallCenter - angle.ballCenterToPivotToBallSurface - angle.ballSurfaceToPivotToWedgeCenter
-        : angle.pivotToBallCenter + angle.ballCenterToPivotToBallSurface + angle.ballSurfaceToPivotToWedgeCenter;
-        console.log('angle.flipperRotationAtPointOfContact', angle.flipperRotationAtPointOfContact)
-      // STEP 8
-        angle.flipperAngleOfContact = side === 'right' ?
-          angle.flipperRotationAtPointOfContact - flipper.wedgeSlope
-        : angle.flipperRotationAtPointOfContact + flipper.wedgeSlope;
-
-      return {  flipperRotationAtPointOfContact: angle.flipperRotationAtPointOfContact, 
-                flipperAngleOfContact: angle.flipperAngleOfContact,
-                distanceFromCenter: distance.pivotToBallCenter }
+      return getContactFrame({
+        ball,
+        flipper: {
+          wedgeSlope: this.wedgeSlope,
+          wedgeBaseHeight: this.wedgeBaseHeight,
+          length: this.flipperLengthFromPivot,
+          axis: this.axis[side]
+        },
+        side
+      })
   }
 }

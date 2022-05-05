@@ -7,9 +7,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import CannonDebugger from 'cannon-es-debugger';
 import Stats from 'stats.js';
 // Objects
-import { WedgeFlipper } from './cannon/objects/WedgeFlipper';
+import { WedgeFlipper, Ball, Playfield } from './cannon/objects';
 import KeyEvents from './inputEvents';
-
+// Collison groups
+import { COLLISION_GROUPS } from './cannon/collisions';
 
 // INIT CANNON ES
 const world = new CANNON.World();
@@ -22,30 +23,14 @@ camera.position.set(0, 15, 5);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-// ADD TEST FLOOR
-const floorShape = new CANNON.Box(new CANNON.Vec3(6, .25, 8));
-const floorBody = new CANNON.Body({
-  mass: 0,
-  position: new CANNON.Vec3(0, -.25, -6)
-});
-floorBody.addShape(floorShape, new CANNON.Vec3(0, 0, 0));
-world.addBody(floorBody);
-let quat = new CANNON.Quaternion();
-quat.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 3);
-floorBody.quaternion.copy(quat);
+// ADD PLAYFIELD
+const playField = new Playfield({ world });
 // ADD BALL
-const ballShape = new CANNON.Sphere(.25);
-const ballBody = new CANNON.Body({ 
-  mass: 10, 
-  position: new CANNON.Vec3(-5, 2, -8) 
-});
-ballBody.velocity.x = 2 + Math.random() * 1.25;
-ballBody.velocity.z = 6;
-ballBody.addShape(ballShape);
-world.addBody(ballBody);
+const ball = new Ball({ world });
+ball.spawn();
 // ADD FLIPPERS 
-const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ballBody });
-const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ballBody });
+const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ball.bodyRef() });
+const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ball.bodyRef() });
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);
 const controls = new OrbitControls(camera, renderer.domElement);
