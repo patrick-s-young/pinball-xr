@@ -7,7 +7,6 @@ export function WedgeFlipper ({
   side
   }) {
 // BIND OBJECT FUNCTIONS
-  this.collisionHandler = this.collisionHandler.bind(this);
   this.onFlipperUp = this.onFlipperUp.bind(this);
   this.onFlipperDown = this.onFlipperDown.bind(this);
   this.getCollisionFrame = this.getCollisionFrame.bind(this);
@@ -28,46 +27,37 @@ export function WedgeFlipper ({
   this.hitAreas = hitAreas;
 // CREATE FLIPPER CANNON BODY
   this.body = initFlipper.CREATE_BODY({ world, side });
-// STATIC FLIPPER COLLISION HANDLER
-  this.body.addEventListener('collide', this.collisionHandler(this.flipperState));
 // ANGLE OF FLIPPER AT REST
   this.body.quaternion.copy(this.animation[0]);
-}
-
-
-WedgeFlipper.prototype.collisionHandler = (flipperStateRef) => {
-  return (e) => {
-// IF FLIPPER IS ANIMATING, DO NOTHING
-    if (flipperStateRef.isAnimating === true) return;
-// IF FLIPPER IS NOT ANIMATING, DETERMINE DIRECTION OF BALL
-    const { body:ball, target:flipper } = e;
-    const { position, previousPosition } = ball;
-    const ballPrevPos = new CANNON.Vec3(...Object.values(previousPosition));
-    const ballPos = new CANNON.Vec3(...Object.values(position));
-    const ballPosDiff = new CANNON.Vec3();
-    ballPos.vsub(ballPrevPos, ballPosDiff);
-    const ballUnitVec = new CANNON.Vec3(); // ballUnitVec not used
-    ballPosDiff.unit(ballUnitVec);
-// IF BALL IS MOVING AWAY FROM FLIPPER, DO NOTHING
-    if (ball.velocity.z < 0) return;
-// GET THE TANGENT VECTOR OF THE CURRENT FLIPPER ORIENTATION - 'UP' OR 'DOWN'
-    const tangentCollisionVector = flipperStateRef.tangentCollisionVector[flipperStateRef.orientation];
-    const maxVelocity = 5;
-    const magnitude = {
-      x: Math.abs(ballUnitVec.x),
-      z: Math.abs(ballUnitVec.z)
+// CREATE STATIC FLIPPER CANNON BODY
+  const staticBody = initFlipper.CREATE_BODY({ world, side });
+  staticBody.isTrigger = false;
+  staticBody.quaternion.copy(this.animation[0]);
+  this.staticFlipper = {
+    body: staticBody,
+    downQuaternion: this.animation[0],
+    upQuaternion: this.animation[this.animation.length - 1],
+    positionX: this.body.position.x,
+    showDown () {
+      this.body.position.x = this.positionX,
+      this.body.quaternion.copy(this.downQuaternion);
+    },
+    showUp () {
+      this.body.position.x = this.positionX,
+      this.body.quaternion.copy(this.upQuaternion);
+    },
+    hide () {
+      this.body.position.x = -100
     }
-    const velocity = new CANNON.Vec3(
-      tangentCollisionVector.x * maxVelocity, //* magnitude.x,
-      -ballPosDiff.y,
-      tangentCollisionVector.z * maxVelocity //+ magnitude.z
-    );
-    ball.velocity.set(...Object.values(velocity));
   }
 }
 
 
+
+
+
 WedgeFlipper.prototype.onFlipperUp = function () {
+  this.staticFlipper.hide();
   this.getCollisionFrame();
   this.flipperState.isAnimating = true;
   this.flipperState.orientation = 'up';
@@ -77,6 +67,7 @@ WedgeFlipper.prototype.onFlipperUp = function () {
 }
 
 WedgeFlipper.prototype.onFlipperDown = function () {
+  this.staticFlipper.hide();
   this.flipperState.isAnimating = true;
   this.flipperState.orientation = 'down';
   this.stepState.frame = this.animation.length - 1;
@@ -95,12 +86,15 @@ WedgeFlipper.prototype.step = function () {
   this.body.quaternion.copy(this.animation[this.stepState.frame]);
 // CHECK IF COLLISION FRAME
   if (this.stepState.frame ===  this.collisionState.impact.frame) {
-    this.ballState.ref.velocity.set(...Object.values( this.collisionState.impact.velocity));
+    this.ballState.ref.velocity.set(...Object.values( this.collisionState.impact.velocity ));
+    //console.log('Object.values( this.collisionState.impact.position )', Object.values( this.collisionState.impact.position ))
+    this.ballState.ref.position.set(...Object.values( this.collisionState.impact.position ))
     this.collisionState.impact.frame = -1;
   }
 // CHECK IF LAST ANIMATION FRAME HAS BEEN RENDERED
   if (this.stepState.frame === this.stepState.endFrame) {
     this.flipperState.isAnimating = false;
+    this.stepState.endFrame === 0 ? this.staticFlipper.showDown() : this.staticFlipper.showUp();
   }
 }
 
@@ -121,6 +115,7 @@ WedgeFlipper.prototype.getCollisionFrame = function () {
         radius: this.ballState.radius,
         position: {
           x: ballPos.x - frame * ballPosDiff.x,
+          y: ballPos.y - frame * ballPosDiff.y,
           z: ballPos.z - frame * ballPosDiff.z
         }
       },
@@ -128,7 +123,7 @@ WedgeFlipper.prototype.getCollisionFrame = function () {
     }
     );
 
-    const { flipperRotationAtPointOfContact, flipperAngleOfContact, distanceFromCenter } = flipperCollisionResults; 
+    const { flipperRotationAtPointOfContact, flipperAngleOfContact, distanceFromCenter, ballPosition } = flipperCollisionResults; 
     if (distanceFromCenter > this.collisionState.flipperLengthFromPivot) continue;
 
     const { min, max } = this.hitAreas[frame];
@@ -154,8 +149,9 @@ WedgeFlipper.prototype.getCollisionFrame = function () {
       tangentVelocity.z *  this.collisionState.maxVelocity * flipperMagnitude
     );
     this.collisionState.impact = {
-      frame,
-      velocity
+      frame: frame - 1,
+      velocity,
+      position: ballPosition
     }
     break;
   }
