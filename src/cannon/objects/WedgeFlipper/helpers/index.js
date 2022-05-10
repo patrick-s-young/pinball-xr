@@ -5,6 +5,7 @@ export const createFlipperBody = ({
   mass,
   isTrigger,
   position,
+  material,
   collisionFilterGroup,
   shape,
   shapeOffset   
@@ -13,6 +14,7 @@ export const createFlipperBody = ({
     mass,
     isTrigger,
     position,
+    material,
     collisionFilterGroup
   });
   body.addShape(shape, shapeOffset);
@@ -72,5 +74,5 @@ console.log('STEP 8: angle.flipperAngleOfContact', angle.flipperAngleOfContact);
 
     const { flipperRotationAtPointOfContact, flipperAngleOfContact } = angle;
     const { pivotToBallCenter:distanceFromCenter } = distance;
-    return {  flipperRotationAtPointOfContact, flipperAngleOfContact, distanceFromCenter }
+    return {  flipperRotationAtPointOfContact, flipperAngleOfContact, distanceFromCenter, ballPosition: ball.position }
 }

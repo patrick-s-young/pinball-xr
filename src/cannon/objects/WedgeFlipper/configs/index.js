@@ -3,6 +3,7 @@ import { COLLISION_GROUPS } from '../../../collisions';
 import { CannonWedge } from '../../../shapes';
 import { createFlipperBody, getContactFrame } from '../helpers';
 import { PLAYFIELD_SLOPE_RADIANS } from '../../../constants';
+import { flipperMaterial } from '../../../materials';
 
 export const initFlipper = {
   flipperLengthFromPivot: 4,
@@ -35,6 +36,7 @@ export const initFlipper = {
       mass: 0,
       isTrigger: true,
       position: this.axis[side],
+      material: flipperMaterial,
       collisionFilterGroup: COLLISION_GROUPS.FLIPPER,
       shape: this.shape,
       shapeOffset: this.shapeOffset,

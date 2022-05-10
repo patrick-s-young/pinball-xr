@@ -11,7 +11,7 @@ export const initContactMaterials = ({ world }) => {
     playFieldMaterial, 
     ballMaterial, {
     friction: 0.1,
-    restitution: 0.1
+    restitution: 0.6
     }
   );
   world.addContactMaterial(ballAndPlayfield);
@@ -26,11 +26,12 @@ export const initContactMaterials = ({ world }) => {
   world.addContactMaterial(ballAndBumper);
 // BALL & FLIPPER
   const ballAndFlipper = new CANNON.ContactMaterial(
-    ballMaterial,
-    flipperMaterial, {
-      friction: 0.1,
-      restitution: 0.5
+    flipperMaterial,
+    ballMaterial, {
+    friction: 0.2,
+    restitution: 0.7
     }
+    
   );
   world.addContactMaterial(ballAndFlipper)
 }

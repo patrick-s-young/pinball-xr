@@ -9,8 +9,8 @@ import Stats from 'stats.js';
 // Objects
 import { WedgeFlipper, Ball, Playfield, Bumper } from './cannon/objects';
 import KeyEvents from './inputEvents';
-// Collison groups
-import { COLLISION_GROUPS } from './cannon/collisions';
+// Contact Materials
+import { initContactMaterials } from './cannon/materials';
 
 // INIT CANNON ES
 const world = new CANNON.World();
@@ -20,7 +20,7 @@ world.broadphase = new CANNON.NaiveBroadphase();
 // INIT THREE JS
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 15, 5);
+camera.position.set(0, 6, 15);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -38,6 +38,9 @@ ball.spawn();
 // ADD FLIPPERS 
 const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ball.bodyRef() });
 const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ball.bodyRef() });
+
+// INIT CONTACT MATERIALS
+initContactMaterials({ world });
 
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);
