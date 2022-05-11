@@ -117,7 +117,8 @@ export const initFlipper = {
   },
   GET_FLIPPER_ANGLE_OF_CONTACT ({
     ball,
-    side
+    side,
+    hitArea
     }) {
       return getContactFrame({
         ball,
@@ -127,7 +128,9 @@ export const initFlipper = {
           length: this.flipperLengthFromPivot,
           axis: this.axis[side]
         },
-        side
+        side,
+        hitArea,
+        maxVelocity: this.maxVelocity
       })
   }
 }
