@@ -12,7 +12,7 @@ This project will be in three phases:
 3. User experience elements including onboarding of VR mode (from the default browser-based experience), sound design, and immersive environment (i.e. arcade). 
 
 ### Tools
-I am initially developing in Javascript with an eye on refactoring to incorporate [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and [zustand](https://github.com/pmndrs/zustand). I suspect that it will help keep my project better organized as it grows.
+I am initially developing in vanilla Javascript - along with [cannon-es](https://github.com/pmndrs/cannon-es) - with an eye on refactoring to incorporate [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and [zustand](https://github.com/pmndrs/zustand). I suspect that it will help keep my project better organized as it grows.
  
 To easily test the VR mode without having to continuously don and remove a headset, I am using the [WebXR API Emulator](https://github.com/MozillaReality/WebXR-emulator-extension) by Mozilla Mixed Reality (a great developer tool).
 
