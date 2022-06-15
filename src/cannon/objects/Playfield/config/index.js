@@ -1,6 +1,6 @@
 import * as CANNON from 'cannon-es';
 import { playFieldMaterial } from 'cannon/materials';
-import { CannonCurve, CannonRect } from 'cannon/shapes';
+import { CannonCurve, CannonRect, CannonOrbit } from 'cannon/shapes';
 import { quaternionPlayfieldSlope } from 'cannon/constants';
 import { COLLISION_GROUPS } from 'cannon/collisions';
 
@@ -9,6 +9,20 @@ export const PLAYFIELD_CONFIG = {
   quaternionPlayfieldSlope,
   collisionGroup: COLLISION_GROUPS.PLAYFIELD,
   playFieldMaterial,
+  compositeElements: [
+    {
+      descripiton: 'Orbit',
+      props: {
+        offset: new CANNON.Vec3(0 + offsetX, 0, -5),
+        radius: 5,
+        height: 1,
+        radialSegments: 32,
+        thetaStart: 0,
+        thetaLength: -Math.PI
+      },
+      computeCompositeShape: (props) => CannonOrbit(props)
+    }
+  ],
   elements: [
   {
     description: 'Floor',
@@ -41,6 +55,7 @@ export const PLAYFIELD_CONFIG = {
     offset: new CANNON.Vec3(0 + offsetX, 0.5, -10.25),
     computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   },
+  /*
   {
     description: 'Top curved wall',
     props: {
@@ -53,6 +68,7 @@ export const PLAYFIELD_CONFIG = {
     offset: new CANNON.Vec3(0 + offsetX, 0, -5),
     computeShape: (props) => CannonCurve(props)
   },
+  */
   {
     description: 'left gutter',
     props: {

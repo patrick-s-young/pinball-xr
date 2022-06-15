@@ -16,6 +16,16 @@ export function Playfield ({ world }) {
     }
   );
 
+  PLAYFIELD_CONFIG.compositeElements.forEach(item => {
+    const { props, computeCompositeShape } = item;
+    const compositeShape = computeCompositeShape(props);
+    compositeShape.forEach(({ shape, offset, orientation }) => {
+      this.body.addShape(shape, offset, orientation);
+    })
+ 
+    }
+  );
+  
   this.body.quaternion.copy(PLAYFIELD_CONFIG.quaternionPlayfieldSlope);
   world.addBody(this.body);
 
