@@ -21,4 +21,29 @@ I am currently in the first phase of establishing the physics behavior (see belo
 
 ![pinball-xr_1080_30fps](https://user-images.githubusercontent.com/42591798/172470576-f48339d1-73e3-42d2-b01b-2d1ab002a82f.gif)
 
+## Running Locally
 
+Make sure you have [Node.js](http://nodejs.org/) installed.
+
+```sh
+git clone https://github.com/patrick-s-young/pinball-xr.git # or clone your own fork
+cd pinball-xr
+npm install
+npm start
+```
+
+## Built With
+
+* [cannon-es](https://www.npmjs.com/package/cannon-es) - rigid body physics engine.
+* [three.js](https://www.npmjs.com/package/three) - lightweight, cross-browser, general purpose 3D library.
+* [cannon-es-debugger](https://www.npmjs.com/package/cannon-es-debugger) - debugger for use with cannon-es.
+* [stats.js](https://www.npmjs.com/package/stats-js) - JavaScript performance monitor.
+* [webpack](https://webpack.js.org/) - static module builder.
+
+## Authors
+
+* **Patrick Young** - [Patrick Young](https://github.com/patrick-s-young)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
