@@ -1,7 +1,21 @@
 import * as CANNON from 'cannon-es';
 
-// SLOPE OF PINBALL PLAYFIELD
-export const PLAYFIELD_SLOPE_RADIANS = Math.PI/180 * 6;
-export const quaternionPlayfieldSlope = new CANNON.Quaternion();
-quaternionPlayfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), PLAYFIELD_SLOPE_RADIANS);
 
+export const PLAYFIELD_CONSTANTS = {
+  slopeRadians: Math.PI/180 * 6,
+  get slopeCos () { return Math.cos(this.slopeRadians) },
+  get slopeSin () { return Math.sin(this.slopeRadians) },
+  get slopeQuaternion () {  return getQuaternion({x: 1, y: 0, z: 0 }, this.slopeRadians) },
+  offsetX: 0.45,
+  outLaneRadians: Math.PI/180 * 16,
+  get leftOutLaneQuaternion () { return getQuaternion({x: 0, y: 1, z: 0 }, -this.outLaneRadians) },
+  get rightOutLaneQuaternion () { return getQuaternion({x: 0, y: 1, z: 0 }, this.outLaneRadians) },
+}
+
+
+
+function getQuaternion ({x, y, z}, radians) {
+  const quaternion = new CANNON.Quaternion();
+  quaternion.setFromAxisAngle(new CANNON.Vec3(x, y, z), radians);
+  return quaternion;
+}

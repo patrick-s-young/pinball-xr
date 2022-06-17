@@ -1,17 +1,17 @@
 import * as CANNON from 'cannon-es';
-import { COLLISION_GROUPS } from '../../../collisions';
-import { CannonWedge } from '../../../shapes';
+import { COLLISION_GROUPS } from 'cannon/collisions';
+import { CannonWedge } from 'cannon/shapes';
 import { createFlipperBody, getContactFrame } from '../helpers';
-import { PLAYFIELD_SLOPE_RADIANS } from '../../../constants';
-import { flipperMaterial } from '../../../materials';
+import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
+import { flipperMaterial } from 'cannon/materials';
 
 export const initFlipper = {
   flipperLengthFromPivot: 4,
   flipperHeight: 0.8,
   wedgeBaseHeight: 0.5,
   flipperOffsetZ: 7,
-  get playFieldSlopeOffsetY() { return  Math.sin(PLAYFIELD_SLOPE_RADIANS) * this.flipperOffsetZ},
-  get playFieldSlipeOffsetZ() { return  Math.cos(PLAYFIELD_SLOPE_RADIANS) * this.flipperOffsetZ},
+  get playFieldSlopeOffsetY() { return  PLAYFIELD_CONSTANTS.slopeSin * this.flipperOffsetZ},
+  get playFieldSlipeOffsetZ() { return  PLAYFIELD_CONSTANTS.slopeCos * this.flipperOffsetZ},
   get wedgeSlope() { return Math.atan(this.wedgeBaseHeight / this.flipperLengthFromPivot)},
   maxVelocity: 60,
   get axis() { return {

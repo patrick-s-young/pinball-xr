@@ -1,19 +1,19 @@
 import * as CANNON from 'cannon-es';
 import { playFieldMaterial } from 'cannon/materials';
-import { CannonCurve, CannonRect, CannonOrbit } from 'cannon/shapes';
-import { quaternionPlayfieldSlope } from 'cannon/constants';
+import { CannonRect, CannonCurve, CannonOrbit } from 'cannon/shapes';
+import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
 import { COLLISION_GROUPS } from 'cannon/collisions';
 
-const offsetX = 0.45;
+
 export const PLAYFIELD_CONFIG = {
-  quaternionPlayfieldSlope,
+  quaternionPlayfieldSlope: PLAYFIELD_CONSTANTS.slopeQuaternion,
   collisionGroup: COLLISION_GROUPS.PLAYFIELD,
   playFieldMaterial,
   compositeElements: [
     {
       descripiton: 'Orbit',
       props: {
-        offset: new CANNON.Vec3(0 + offsetX, 0, -5),
+        offset: new CANNON.Vec3(0 + PLAYFIELD_CONSTANTS.offsetX, 0, -5),
         radius: 5,
         height: 1,
         radialSegments: 32,
@@ -31,18 +31,18 @@ export const PLAYFIELD_CONFIG = {
       ySize: 0,
       zSize: 20
     },
-    offset: new CANNON.Vec3(0 + offsetX, 0, 0),
+    offset: new CANNON.Vec3(0 + PLAYFIELD_CONSTANTS.offsetX, 0, 0),
     computeShape: (props) => CannonRect(props)
   },
 
   {
     description: 'Ceiling',
     props: {
-      xSize: 10,
+      xSize: 11,
       ySize: .5,
       zSize: 20
     },
-    offset: new CANNON.Vec3(0 + offsetX, 1.25, 0),
+    offset: new CANNON.Vec3(0 + PLAYFIELD_CONSTANTS.offsetX, 1.25, 0),
     computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   },   
   {
@@ -52,23 +52,9 @@ export const PLAYFIELD_CONFIG = {
       ySize: 1,
       zSize: .5
     },
-    offset: new CANNON.Vec3(0 + offsetX, 0.5, -10.25),
+    offset: new CANNON.Vec3(0 + PLAYFIELD_CONSTANTS.offsetX, 0.5, -10.25),
     computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   },
-  /*
-  {
-    description: 'Top curved wall',
-    props: {
-      radius: 5,
-      height: 1,
-      radialSegments: 32,
-      thetaStart: 0,
-      thetaLength: -Math.PI * 1.2
-    },
-    offset: new CANNON.Vec3(0 + offsetX, 0, -5),
-    computeShape: (props) => CannonCurve(props)
-  },
-  */
   {
     description: 'left gutter',
     props: {
@@ -78,7 +64,7 @@ export const PLAYFIELD_CONFIG = {
       thetaStart: -Math.PI,
       thetaLength: -Math.PI * .30
     },
-    offset: new CANNON.Vec3(-3 + offsetX, 0, 4.75),
+    offset: new CANNON.Vec3(-3 + PLAYFIELD_CONSTANTS.offsetX, 0, 4.75),
     computeShape: (props) => CannonCurve(props)
   },
   {
@@ -90,18 +76,30 @@ export const PLAYFIELD_CONFIG = {
       thetaStart: 0,
       thetaLength: Math.PI * .30
     },
-    offset: new CANNON.Vec3(2.25 + offsetX, 0, 4.75),
+    offset: new CANNON.Vec3(2.25 + PLAYFIELD_CONSTANTS.offsetX, 0, 4.75),
     computeShape: (props) => CannonCurve(props)
   },
   {
-    description: 'Bottom wall',
+    description: 'bottom left outlane',
     props: {
-      xSize: 10,
+      xSize: 4,
       ySize: 1,
-      zSize: 0
+      zSize: 0.5
     },
-    offset: new CANNON.Vec3(0 + offsetX, 0.5, 10),
-    computeShape: (props) => CannonRect(props)
+    offset: new CANNON.Vec3(-3 + PLAYFIELD_CONSTANTS.offsetX, 0.5, 9.5),
+    quaternion: PLAYFIELD_CONSTANTS.leftOutLaneQuaternion,
+    computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
+  },
+  {
+    description: 'bottom right outlane',
+    props: {
+      xSize: 4,
+      ySize: 1,
+      zSize: 0.5
+    },
+    offset: new CANNON.Vec3(3 - PLAYFIELD_CONSTANTS.offsetX, 0.5, 9.5),
+    quaternion: PLAYFIELD_CONSTANTS.rightOutLaneQuaternion,
+    computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   },
   {
     description: 'Left wall',
@@ -110,7 +108,7 @@ export const PLAYFIELD_CONFIG = {
       ySize: 1,
       zSize: 20
     },
-    offset: new CANNON.Vec3(-5.25 + offsetX, .5, 0),
+    offset: new CANNON.Vec3(-5.25 + PLAYFIELD_CONSTANTS.offsetX, .5, 0),
     computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   },
   {
@@ -120,17 +118,7 @@ export const PLAYFIELD_CONFIG = {
       ySize: 1,
       zSize: 20
     },
-    offset: new CANNON.Vec3(5.25 + offsetX, .5, 0),
-    computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
-  },
-  {
-    description: 'Right wall',
-    props: {
-      xSize: 0.2,
-      ySize: 1,
-      zSize: 15
-    },
-    offset: new CANNON.Vec3(4.3 + offsetX, .5, 2.5),
+    offset: new CANNON.Vec3(5.25 + PLAYFIELD_CONSTANTS.offsetX, .5, 0),
     computeShape: (props) => new CANNON.Box(new CANNON.Vec3(props.xSize / 2, props.ySize / 2, props.zSize / 2))
   }
   ]
