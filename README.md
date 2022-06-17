@@ -31,6 +31,9 @@ cd pinball-xr
 npm install
 npm start
 ```
+- Left Flipper: A Key
+- Right Fipper: L Key
+- Refresh browser for new ball
 
 ## Built With
 
