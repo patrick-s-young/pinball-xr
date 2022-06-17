@@ -7,7 +7,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import CannonDebugger from 'cannon-es-debugger';
 import Stats from 'stats.js';
 // Objects
-import { WedgeFlipper, Ball, Playfield, Bumper } from './cannon/objects';
+import { WedgeFlipper, Ball, Playfield, Bumper, ShooterLane } from './cannon/objects';
 import KeyEvents from './inputEvents';
 // Contact Materials
 import { initContactMaterials } from './cannon/materials';
@@ -20,13 +20,17 @@ world.broadphase = new CANNON.NaiveBroadphase();
 // INIT THREE JS
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 6, 15);
+camera.position.set(0, 10, 14);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // ADD PLAYFIELD
 const playField = new Playfield({ world });
+
+// ADD SHOOTER LANE
+const shooterLane = new ShooterLane({ world });
+setTimeout(shooterLane.onClose, 3000);
 
 // ADD BUMPERS
 const bumpers = Bumper({ world });
@@ -78,7 +82,7 @@ keyEvents.addSubscriber({
 const clock = new THREE.Clock();
 let delta;
 const timeStep = 1/60;
-const maxSubSteps = 5;
+const maxSubSteps = 10;
 // ANIMATION LOOP
 function animate() {
   stats.begin();

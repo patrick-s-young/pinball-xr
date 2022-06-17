@@ -10,9 +10,9 @@ export function Playfield ({ world }) {
     }
   );
   PLAYFIELD_CONFIG.elements.forEach(item => {
-    const { props, offset, computeShape } = item;
+    const { props, offset, quaternion, computeShape } = item;
     const shape = computeShape(props);
-    this.body.addShape(shape, offset)
+    this.body.addShape(shape, offset, quaternion)
     }
   );
 

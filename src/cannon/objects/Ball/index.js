@@ -26,8 +26,7 @@ export function Ball ({ world }) {
 }
 
 Ball.prototype.spawn = function () {
-  this.body.velocity.x = - 9 - Math.random() * 2;
-  this.body.velocity.z = 6;
+  this.body.velocity.z = 30;
 }
 
 Ball.prototype.bodyRef = function () {
