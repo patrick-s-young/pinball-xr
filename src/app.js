@@ -7,7 +7,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import CannonDebugger from 'cannon-es-debugger';
 import Stats from 'stats.js';
 // Objects
-import { WedgeFlipper, Ball, Playfield, Bumper, ShooterLane } from './cannon/objects';
+import { WedgeFlipper, Ball, Playfield, Bumper, ShooterLane } from 'cannon/objects';
+// Triggers
+import { DrainTrigger } from 'cannon/triggers';
+// Custom EventTarget
+import { PXREvent, DRAIN_EVENT } from 'cannon/customEvents';
+// Input
 import KeyEvents from './inputEvents';
 // Contact Materials
 import { initContactMaterials } from './cannon/materials';
@@ -37,7 +42,7 @@ const bumpers = Bumper({ world });
 
 // ADD BALL
 const ball = new Ball({ world });
-ball.spawn();
+setTimeout(ball.spawn, 1000);
 
 // ADD FLIPPERS 
 const leftFlipper = new WedgeFlipper({ world, side: 'left', ballRef: ball.bodyRef() });
@@ -45,6 +50,17 @@ const rightFlipper = new WedgeFlipper({ world, side: 'right', ballRef: ball.body
 
 // INIT CONTACT MATERIALS
 initContactMaterials({ world });
+
+// ADD TRIGGERS
+const drainTrigger = new DrainTrigger({ world });
+drainTrigger.addCollideDispatch(() => PXREvent.dispatchEvent(DRAIN_EVENT));
+
+// LISTENERS
+PXREvent.addEventListener('DRAIN_EVENT', () => {
+  shooterLane.onOpen();
+  setTimeout(ball.spawn, 1000);
+  setTimeout(shooterLane.onClose, 4000);
+});
 
 // DEV/DEBUG HELPERS
 const cannonDebugger = new CannonDebugger(scene, world);

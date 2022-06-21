@@ -3,7 +3,8 @@ import * as CANNON from 'cannon-es';
 export const COLLISION_GROUPS = {
   BALL: 1,
   PLAYFIELD: 2,
-  FLIPPER: 4
+  FLIPPER: 4,
+  TRIGGER: 5
 }
 
 
@@ -32,6 +33,3 @@ export const bumperCollisionHandler = (e) => {
   e.body.velocity.z = impulse.z;
 }
 
-export const lowerLimitFlipperCollisionHandler = (e) => {
-  e.target.constraintTarget.motorEquation.enabled = false;
-}
