@@ -94,8 +94,6 @@ WedgeFlipper.prototype.step = function () {
     hitArea: this.hitAreas[this.stepState.frame]
     }
   );
-
-console.log('flipperCollisionResults', flipperCollisionResults)
 // CHECK IF COLLISION FRAME
   if (flipperCollisionResults !== null) {
     const { ballVelocity, ballPosition } = flipperCollisionResults; 

@@ -19,3 +19,8 @@ function getQuaternion ({x, y, z}, radians) {
   quaternion.setFromAxisAngle(new CANNON.Vec3(x, y, z), radians);
   return quaternion;
 }
+
+
+
+export const PXREvent = new EventTarget();
+export const DRAIN_EVENT = new Event('DRAIN_EVENT'); // organize event definitions in dedicated config

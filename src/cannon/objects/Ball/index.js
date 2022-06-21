@@ -10,6 +10,7 @@ export function Ball ({ world }) {
     collisionFilterGroup,
     collisionFilterMask
   } = BALL_CONFIG;
+  this.position = position;
   this.spawn = this.spawn.bind(this);
   this.bodyRef = this.bodyRef.bind(this);
   this.body = new CANNON.Body({
@@ -26,7 +27,14 @@ export function Ball ({ world }) {
 }
 
 Ball.prototype.spawn = function () {
-  this.body.velocity.z = 30;
+  const { x, y, z } = this.position;
+  this.body.position.x = x;
+  this.body.position.y = y;
+  this.body.position.z = z;
+
+  this.body.velocity.x = 0;
+  this.body.velocity.y = 0;
+  this.body.velocity.z = -35;
 }
 
 Ball.prototype.bodyRef = function () {
