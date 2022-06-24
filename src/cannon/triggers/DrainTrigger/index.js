@@ -20,11 +20,9 @@ export function DrainTrigger ({ world }) {
   );
 
   this.body.addShape(elements.drainTrigger.shape, elements.drainTrigger.offset);
-
-
   world.addBody(this.body);
 }
 
 DrainTrigger.prototype.addCollideDispatch = function(callBack) {
-  this.body.addEventListener('collide', callBack);
+  this.body.addEventListener('collide', callBack)
 }

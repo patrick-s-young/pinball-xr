@@ -1,5 +1,7 @@
 // Three js
 import * as THREE from 'three';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 // Cannon es
 import * as CANNON from 'cannon-es';
 // Dev/Debug
@@ -26,9 +28,74 @@ world.broadphase = new CANNON.NaiveBroadphase();
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.set(0, 10, 14);
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio( window.devicePixelRatio );
+renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+
+/////////////////////////////////////
+// SET UP CONTROLLERS
+let controller1, controller2;
+let controllerGrip1, controllerGrip2;
+
+function onSelectStart() {
+  this.userData.isSelecting = true;
+}
+
+function onSelectEnd() {
+  this.userData.isSelecting = false;
+}
+
+controller1 = renderer.xr.getController( 0 );
+controller1.addEventListener( 'selectstart', onSelectStart );
+controller1.addEventListener( 'selectend', onSelectEnd );
+controller1.addEventListener( 'connected', function ( event ) {
+  this.add( buildController( event.data ) );
+});
+controller1.addEventListener( 'disconnected', function () {
+  this.remove( this.children[ 0 ] );
+});
+scene.add( controller1 );
+
+controller2 = renderer.xr.getController( 1 );
+controller2.addEventListener( 'selectstart', onSelectStart );
+controller2.addEventListener( 'selectend', onSelectEnd );
+controller2.addEventListener( 'connected', function ( event ) {
+  this.add( buildController( event.data ) );
+});
+controller2.addEventListener( 'disconnected', function () {
+  this.remove( this.children[ 0 ] );
+});
+scene.add( controller2 );
+
+const controllerModelFactory = new XRControllerModelFactory();
+
+controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+scene.add( controllerGrip1);
+
+controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+scene.add( controllerGrip2 );
+
+
+function buildController( data ) {
+  let geometry, material;
+  switch ( data.targetRayMode ) {
+    case 'tracked-pointer':
+      geometry = new THREE.BufferGeometry();
+      geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
+      geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
+      material = new THREE.LineBasicMaterial( { vertexColors: true, blending: THREE.AdditiveBlending } );
+      return new THREE.Line( geometry, material );
+    case 'gaze':
+      geometry = new THREE.RingGeometry( 0.02, 0.04, 32 ).translate( 0, 0, - 1 );
+      material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
+      return new THREE.Mesh( geometry, material );
+  }
+}
 
 // ADD PLAYFIELD
 const playField = new Playfield({ world });
@@ -113,8 +180,24 @@ function animate() {
   requestAnimationFrame(animate);
 }
 // START ANIMATION
-animate();
+//animate();
 
+function animateXR() {
+  renderer.setAnimationLoop( render );
+}
+animateXR();
+
+function render() {
+  stats.begin();
+  controls.update();
+  cannonDebugger.update();
+  leftFlipper.step();
+  rightFlipper.step();
+  delta = Math.min(clock.getDelta(), 0.1)
+  world.step(timeStep, delta, maxSubSteps);   
+  renderer.render(scene, camera)
+  stats.end();
+}
 
 
 
