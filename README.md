@@ -33,7 +33,7 @@ npm start
 ```
 - Left Flipper: A Key
 - Right Fipper: L Key
-- Refresh browser for new ball
+- Refresh browser for new ball or let ball fall into drain.
 
 ## Built With
 
