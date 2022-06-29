@@ -33,7 +33,7 @@ npm start
 ```
 - Left Flipper: A Key
 - Right Fipper: L Key
-- Refresh browser for new ball or let ball fall into drain.
+- Refresh browser for new ball (or let ball fall down drain).
 
 ## Built With
 
@@ -42,6 +42,7 @@ npm start
 * [cannon-es-debugger](https://www.npmjs.com/package/cannon-es-debugger) - debugger for use with cannon-es.
 * [stats.js](https://www.npmjs.com/package/stats-js) - JavaScript performance monitor.
 * [webpack](https://webpack.js.org/) - static module builder.
+* [WebXR API Emulator](https://chrome.google.com/webstore/detail/webxr-api-emulator/mjddjgeghkdijejnciaefnkjmkafnnje?hl=en) - browser extension enables developers to run and test WebXR content in desktop browsers without using a real XR device.
 
 ## Authors
 
