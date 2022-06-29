@@ -35,6 +35,13 @@ renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
+// LIGHTS
+scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
+
+const light = new THREE.DirectionalLight( 0xffffff );
+light.position.set( 1, 1, 1 ).normalize();
+scene.add( light );
+
 /////////////////////////////////////
 // SET UP CONTROLLERS
 let controller1, controller2;
@@ -42,13 +49,16 @@ let controllerGrip1, controllerGrip2;
 
 function onSelectStart() {
   this.userData.isSelecting = true;
+  handleController(this);
 }
 
 function onSelectEnd() {
   this.userData.isSelecting = false;
+  handleController(this);
 }
 
 controller1 = renderer.xr.getController( 0 );
+controller1.name = 'controller1';
 controller1.addEventListener( 'selectstart', onSelectStart );
 controller1.addEventListener( 'selectend', onSelectEnd );
 controller1.addEventListener( 'connected', function ( event ) {
@@ -60,6 +70,7 @@ controller1.addEventListener( 'disconnected', function () {
 scene.add( controller1 );
 
 controller2 = renderer.xr.getController( 1 );
+controller2.name = 'controller2'
 controller2.addEventListener( 'selectstart', onSelectStart );
 controller2.addEventListener( 'selectend', onSelectEnd );
 controller2.addEventListener( 'connected', function ( event ) {
@@ -95,6 +106,26 @@ function buildController( data ) {
       material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
       return new THREE.Mesh( geometry, material );
   }
+}
+
+const selectState = {
+  controller1: {
+    isSelecting: false,
+    callBack () { this.isSelecting === true ? rightFlipper.onFlipperUp() : rightFlipper.onFlipperDown() },
+  },
+  controller2: {
+    isSelecting: false,
+    callBack () { this.isSelecting === true ? leftFlipper.onFlipperUp(): leftFlipper.onFlipperDown() },
+  }
+}
+
+function handleController( controller ) {
+  const { name, userData } = controller;
+  if (selectState[name].isSelecting === userData.isSelecting) return;
+  console.log(`${name} select state is now ${userData.isSelecting}`);
+  selectState[name].isSelecting = userData.isSelecting;
+  selectState[name].callBack();
+
 }
 
 // ADD PLAYFIELD
