@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { initFlipper } from './configs';
+import { initFlipper } from './config';
 
 export function WedgeFlipper ({
   world,
