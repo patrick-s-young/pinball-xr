@@ -1,5 +1,5 @@
 import { Body } from 'cannon-es';
-import { DRAIN_TRIGGER_CONFIG } from './configs';
+import { DRAIN_TRIGGER_CONFIG } from './config';
 
 export function DrainTrigger ({ world }) {
 

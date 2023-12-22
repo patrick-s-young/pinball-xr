@@ -1,7 +1,7 @@
 import * as CANNON from 'cannon-es';
 import { COLLISION_GROUPS } from 'cannon/collisions';
 import { CannonWedge } from 'cannon/shapes';
-import { createFlipperBody, getContactFrame } from '../helpers';
+import { createFlipperBody, getContactFrame } from './helpers';
 import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
 import { flipperMaterial } from 'cannon/materials';
 
