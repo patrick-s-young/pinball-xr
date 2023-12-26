@@ -1,7 +1,7 @@
 import * as CANNON from 'cannon-es';
-import { COLLISION_GROUPS } from 'cannon/collisions';
-import { ballMaterial } from 'cannon/materials';
-import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
+import { COLLISION_GROUPS } from '@cannon/collisions';
+import { ballMaterial } from '@cannon/materials';
+import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
 const offsetX = 0.45; // move to constants
 
 export const BALL_CONFIG = {

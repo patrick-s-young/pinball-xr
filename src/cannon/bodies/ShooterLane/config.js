@@ -1,7 +1,7 @@
 import * as CANNON from 'cannon-es';
-import { playFieldMaterial } from 'cannon/materials';
-import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
-import { COLLISION_GROUPS } from 'cannon/collisions';
+import { playFieldMaterial } from '@cannon/materials';
+import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
+import { COLLISION_GROUPS } from '@cannon/collisions';
 
 
 export const SHOOTER_LANE_CONFIGS = {

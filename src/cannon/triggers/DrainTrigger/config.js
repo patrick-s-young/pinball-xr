@@ -1,6 +1,6 @@
 import { Vec3, Box } from 'cannon-es';
-import { COLLISION_GROUPS } from 'cannon/collisions';
-import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
+import { COLLISION_GROUPS } from '@cannon/collisions';
+import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
 
 export const DRAIN_TRIGGER_CONFIG = {
   mass: 0,
