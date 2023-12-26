@@ -6,7 +6,7 @@
   "scripts": {
     "watch": "webpack --watch",
     "build": "webpack",
-    "start": "webpack server --open --mode=development"
+    "start": "webpack serve --open --https --env debug=true"
   },
   "keywords": [],
   "author": "Patrick S. Young",
@@ -19,5 +19,8 @@
     "webpack": "^5.38.1",
     "webpack-cli": "^4.7.2",
     "webpack-dev-server": "^4.7.4"
+  },
+  "dependencies": {
+    "html-webpack-plugin": "^5.6.0"
   }
 }

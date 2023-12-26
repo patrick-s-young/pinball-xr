@@ -1,8 +1,8 @@
 import * as CANNON from 'cannon-es';
-import { playFieldMaterial } from 'cannon/materials';
-import { CannonRect, CannonCurve, CannonOrbit } from 'cannon/shapes';
-import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
-import { COLLISION_GROUPS } from 'cannon/collisions';
+import { playFieldMaterial } from '@cannon/materials';
+import { CannonRect, CannonCurve, CannonOrbit } from '@cannon/shapes';
+import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
+import { COLLISION_GROUPS } from '@cannon/collisions';
 
 
 export const PLAYFIELD_CONFIG = {

@@ -1,0 +1,54 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\yarn\bin\yarn.js start
+
+PATH: 
+  C:\Python312\Scripts\;C:\Python312\;C:\Python311\Scripts\;C:\Python311\;C:\Program Files (x86)\Common Files\Intel\Shared Libraries\redist\intel64\compiler;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\150\DTS\Binn\;C:\Program Files\dotnet\;C:\Program Files (x86)\Microsoft SQL Server\150\DTS\Binn\;C:\Program Files\Azure Data Studio\bin;C:\Program Files\Git\cmd;C:\Program Files (x86)\dotnet\;C:\Program Files\GitHub CLI\;C:\ProgramData\chocolatey\bin;C:\Users\patri\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Program Files\nodejs\;C:\Users\patri\AppData\Local\Microsoft\WindowsApps;C:\Users\patri\.dotnet\tools;C:\Program Files\Azure Data Studio\bin;C:\Users\patri\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\patri\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Users\patri\AppData\Local\GitHubDesktop\bin;C:\;C:\Users\patri\AppData\Roaming\npm;
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  20.10.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  SyntaxError: C:\Users\patri\Documents\projects\github\pinball-xr\package.json: Expected double-quoted property name in JSON at position 320
+      at JSON.parse (<anonymous>)
+      at C:\Users\patri\AppData\Roaming\nvm\v18.18.2\node_modules\yarn\lib\cli.js:1629:59
+      at Generator.next (<anonymous>)
+      at step (C:\Users\patri\AppData\Roaming\nvm\v18.18.2\node_modules\yarn\lib\cli.js:310:30)
+      at C:\Users\patri\AppData\Roaming\nvm\v18.18.2\node_modules\yarn\lib\cli.js:321:13
+
+npm manifest: 
+  {
+    "name": "pinball-xr",
+    "version": "1.0.0",
+    "description": "Old-school pinball experience using new-school web.",
+    "main": "app.js",
+    "scripts": {
+      "watch": "webpack --watch",
+      "build": "webpack",
+      "start": "webpack serve --open --https",
+      "debug": "webpack serve --open --https --env debug=true",
+    },
+    "keywords": [],
+    "author": "Patrick S. Young",
+    "license": "MIT",
+    "devDependencies": {
+      "cannon-es": "^0.19.0",
+      "cannon-es-debugger": "^1.0.0",
+      "stats.js": "^0.17.0",
+      "three": "^0.137.5",
+      "webpack": "^5.38.1",
+      "webpack-cli": "^4.7.2",
+      "webpack-dev-server": "^4.7.4"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

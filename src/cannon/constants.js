@@ -22,5 +22,3 @@ function getQuaternion ({x, y, z}, radians) {
 
 
 
-export const PXREvent = new EventTarget();
-export const DRAIN_EVENT = new Event('DRAIN_EVENT'); // organize event definitions in dedicated config

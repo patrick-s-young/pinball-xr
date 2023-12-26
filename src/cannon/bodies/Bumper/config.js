@@ -1,7 +1,7 @@
 import * as CANNON from 'cannon-es';
-import { bumperMaterial } from 'cannon/materials';
-import { PLAYFIELD_CONSTANTS } from 'cannon/constants';
-import { bumperCollisionHandler, COLLISION_GROUPS } from 'cannon/collisions';
+import { bumperMaterial } from '@cannon/materials';
+import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
+import { bumperCollisionHandler, COLLISION_GROUPS } from '@cannon/collisions';
 
 const bodyOffsetX = 0.45; 
 export const BUMPER_CONFIG = {
