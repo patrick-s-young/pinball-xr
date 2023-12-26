@@ -19,7 +19,7 @@ To easily test the VR mode without having to continuously don and remove a heads
 ### Progress
 I am currently in the first phase of establishing the physics behavior (see below). Due to the speed of both the ball and the flipper animation, Cannon's collision detection does not work consistently at the target 60fps. As a workaround, I created a collision detection method that estimates the point of contact between the ball and the flipper. Given the point of contact along the length of the flipper, the flipper's angle, and the speed of the ball, a rebound vector is generated (still work in progress).
 
-![pinball-xr_1080_30fps](https://user-images.githubusercontent.com/42591798/172470576-f48339d1-73e3-42d2-b01b-2d1ab002a82f.gif)
+[![pinball-xr_1080_30fps](https://user-images.githubusercontent.com/42591798/172470576-f48339d1-73e3-42d2-b01b-2d1ab002a82f.gif)](https://github.com/patrick-s-young/pinball-xr/assets/42591798/0a7c9b48-5051-4580-aefe-fa71bc07c2ce)
 
 ## Running Locally
 
