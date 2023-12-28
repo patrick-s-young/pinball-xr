@@ -14,7 +14,7 @@ export function ShooterLane ({ world }) {
   });
   // SHOOTER LANE SHAPES
   const { shapes } = SHOOTER_LANE_CONFIGS;
-  const { shooterLaneOpen, shooterLaneClosed, shooterLaneBottom} = shapes;
+  const { shooterLaneOpen, shooterLaneClosed, shooterLaneBottom } = shapes;
   this.lane = {
     open: {
       shape: shooterLaneOpen.shape,

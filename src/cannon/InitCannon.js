@@ -1,4 +1,6 @@
 import * as CANNON from 'cannon-es';
+import { WORLD } from '@src/App.config';
+
 // Bodies
 import { 
   WedgeFlipper, 
@@ -11,7 +13,7 @@ import { initContactMaterials } from '@cannon/materials';
 
 const InitCannon = () => {
   const world = new CANNON.World();
-  world.gravity.set(0, -30, 0);
+  world.gravity.set(...WORLD.gravity);
   world.broadphase = new CANNON.NaiveBroadphase();
 
   initContactMaterials({ world });

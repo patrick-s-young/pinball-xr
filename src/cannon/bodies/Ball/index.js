@@ -1,5 +1,6 @@
 import * as CANNON from 'cannon-es';
 import { BALL_CONFIG } from './config';
+import { BALL } from '@src/App.config';
 
 export function Ball ({ world }) {
   const {
@@ -34,7 +35,7 @@ Ball.prototype.spawn = function () {
 
   this.body.velocity.x = 0;
   this.body.velocity.y = 0;
-  this.body.velocity.z = -35;
+  this.body.velocity.z = BALL.spawnVelocity;
 }
 
 Ball.prototype.bodyRef = function () {

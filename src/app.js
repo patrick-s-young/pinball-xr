@@ -44,7 +44,7 @@ export const App = ({ isDebugMode = false }) => {
       { name: 'orbitControls', update: () => three.orbitControls.update()}
     );
     // three.scene.add([
-    //   meshes.debugFloor.mesh
+    //   meshes.debugFloor.mesh,
     // ]);
   }
 
