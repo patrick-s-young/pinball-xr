@@ -2,21 +2,23 @@ import * as CANNON from 'cannon-es';
 import { COLLISION_GROUPS } from '@cannon/collisions';
 import { CannonWedge } from '@cannon/shapes';
 import { createFlipperBody, getContactFrame } from './helpers';
-import { PLAYFIELD_CONSTANTS } from '@cannon/constants';
+import { PLAYFIELD } from '@src/App.config';
 import { flipperMaterial } from '@cannon/materials';
 
+const SCALER = 0.0584;
+
 export const initFlipper = {
-  flipperLengthFromPivot: 4,
-  flipperHeight: 0.8,
-  wedgeBaseHeight: 0.5,
-  flipperOffsetZ: 7,
-  get playFieldSlopeOffsetY() { return  PLAYFIELD_CONSTANTS.slopeSin * this.flipperOffsetZ},
-  get playFieldSlipeOffsetZ() { return  PLAYFIELD_CONSTANTS.slopeCos * this.flipperOffsetZ},
+  flipperLengthFromPivot: 0.2336,
+  flipperHeight: 0.04672,
+  wedgeBaseHeight: 0.0292,
+  flipperOffsetZ: 0.4088,
+  get playFieldSlopeOffsetY() { return  PLAYFIELD.slopeSin * this.flipperOffsetZ},
+  get playFieldSlipeOffsetZ() { return  PLAYFIELD.slopeCos * this.flipperOffsetZ},
   get wedgeSlope() { return Math.atan(this.wedgeBaseHeight / this.flipperLengthFromPivot)},
   maxVelocity: 60,
   get axis() { return {
-    left: new CANNON.Vec3(-4, this.flipperHeight * 0.75 - this.playFieldSlopeOffsetY, this.flipperOffsetZ),
-    right: new CANNON.Vec3(4, this.flipperHeight * 0.75 - this.playFieldSlopeOffsetY, this.flipperOffsetZ)
+    left: new CANNON.Vec3(-4 * SCALER, this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, this.flipperOffsetZ),
+    right: new CANNON.Vec3(4 * SCALER, this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, this.flipperOffsetZ)
     }
   },
   get shape() { return CannonWedge({ widthX: this.flipperLengthFromPivot / 2, heightY: this.flipperHeight / 2, depthZ: this.wedgeBaseHeight / 2 }) },
@@ -44,7 +46,7 @@ export const initFlipper = {
   },
   CREATE_ANIMATION ({ side }) {
     const playfieldSlope = new CANNON.Quaternion();
-    playfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 6);
+    playfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 6.5);
 
     const startRadian = this.startRadian[side];
     const endRadian = this.endRadian[side];
