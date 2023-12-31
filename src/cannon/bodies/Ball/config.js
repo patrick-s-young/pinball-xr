@@ -6,12 +6,13 @@ import { BALL } from '@src/App.config';
 
 const SCALER = 0.0584;
 
-//const offsetX = 0.45; // move to constants
-
 export const BALL_CONFIG = {
   mass: BALL.mass,
   radius: BALL.radius,
-  position: new CANNON.Vec3(4.75 * SCALER + PLAYFIELD.offsetX, -PLAYFIELD.slopeSin * 9.75 * SCALER + 0.25 * SCALER, PLAYFIELD.slopeCos * 9.75 * SCALER), 
+  position: new CANNON.Vec3(
+    4.75 * SCALER + PLAYFIELD.offsetX, 
+    -PLAYFIELD.slopeSin * 9.75 * SCALER + 0.25 * SCALER, 
+    PLAYFIELD.slopeCos * 9.75 * SCALER), 
   material: ballMaterial,
   collisionFilterGroup: COLLISION_GROUPS.BALL,
   collisionFilterMask: COLLISION_GROUPS.PLAYFIELD | COLLISION_GROUPS.FLIPPER

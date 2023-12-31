@@ -1,7 +1,9 @@
 import * as CANNON from 'cannon-es'
 import { BUMPER_CONFIG } from './config';
 
-export const Bumper = ({ world }) => {
+export const Bumper = ({ 
+  world,
+  placement }) => {
   const bumperBodies = {};
   const {
     shapeProps,
@@ -11,7 +13,7 @@ export const Bumper = ({ world }) => {
     collisionFilterGroup,
     bumperCollisionHandler,
     computeShape } = BUMPER_CONFIG;
-
+ 
   locations.forEach(location => {
     const {
       bumperName,
@@ -26,6 +28,7 @@ export const Bumper = ({ world }) => {
     );
     bumperBody.addShape(bumperShape, offset);
     bumperBody.quaternion.copy(quaternion);
+    bumperBody.position.set(...placement)
     bumperBody.addEventListener('collide', bumperCollisionHandler);
     world.addBody(bumperBody);
     bumperBodies[bumperName] = bumperBody;

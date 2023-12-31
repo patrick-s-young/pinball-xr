@@ -4,6 +4,7 @@ import { CannonWedge } from '@cannon/shapes';
 import { createFlipperBody, getContactFrame } from './helpers';
 import { PLAYFIELD } from '@src/App.config';
 import { flipperMaterial } from '@cannon/materials';
+import { HEIGHT_ABOVE_FLOOR } from '../../../App.config';
 
 const SCALER = 0.0584;
 
@@ -15,14 +16,36 @@ export const initFlipper = {
   get playFieldSlopeOffsetY() { return  PLAYFIELD.slopeSin * this.flipperOffsetZ},
   get playFieldSlipeOffsetZ() { return  PLAYFIELD.slopeCos * this.flipperOffsetZ},
   get wedgeSlope() { return Math.atan(this.wedgeBaseHeight / this.flipperLengthFromPivot)},
-  maxVelocity: 60,
+  maxVelocity: 4,
   get axis() { return {
-    left: new CANNON.Vec3(-4 * SCALER, this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, this.flipperOffsetZ),
-    right: new CANNON.Vec3(4 * SCALER, this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, this.flipperOffsetZ)
+    left: new CANNON.Vec3(
+      -4 * SCALER, 
+      HEIGHT_ABOVE_FLOOR + this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, 
+      this.flipperOffsetZ
+      ),
+    right: new CANNON.Vec3(
+      4 * SCALER,  
+      HEIGHT_ABOVE_FLOOR + this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY, 
+      this.flipperOffsetZ
+      )
     }
   },
   get shape() { return CannonWedge({ widthX: this.flipperLengthFromPivot / 2, heightY: this.flipperHeight / 2, depthZ: this.wedgeBaseHeight / 2 }) },
   get shapeOffset() { return new CANNON.Vec3(this.flipperLengthFromPivot / 2, 0, 0)},
+  getAxis ({ side, placement }) { 
+    const [ x, y, z ] = placement;
+    return side === 'left'
+      ? new CANNON.Vec3(
+        -4 * SCALER + x, 
+        this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY + y, 
+        this.flipperOffsetZ + z
+        )
+      : new CANNON.Vec3(
+        4 * SCALER + x,  
+        this.flipperHeight * 0.75 * SCALER - this.playFieldSlopeOffsetY + y, 
+        this.flipperOffsetZ + z
+        )
+  },
   startRadian: {
     left: -Math.PI/6,
     right: Math.PI + Math.PI/6
@@ -32,12 +55,12 @@ export const initFlipper = {
     right: Math.PI - Math.PI/7
   },
   animSteps: 4,
-  CREATE_BODY ({ world, side }) {
+  CREATE_BODY ({ world, side, placement }) {
     return createFlipperBody({
       world,
       mass: 0,
       isTrigger: true,
-      position: this.axis[side],
+      position: this.getAxis({ side, placement }),
       material: flipperMaterial,
       collisionFilterGroup: COLLISION_GROUPS.FLIPPER,
       shape: this.shape,
@@ -46,7 +69,7 @@ export const initFlipper = {
   },
   CREATE_ANIMATION ({ side }) {
     const playfieldSlope = new CANNON.Quaternion();
-    playfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), Math.PI/180 * 6.5);
+    playfieldSlope.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), PLAYFIELD.slopeRadians);
 
     const startRadian = this.startRadian[side];
     const endRadian = this.endRadian[side];
@@ -119,6 +142,7 @@ export const initFlipper = {
   },
   GET_FLIPPER_ANGLE_OF_CONTACT ({
     ball,
+    flipperBody,
     side,
     hitArea
     }) {
@@ -128,7 +152,8 @@ export const initFlipper = {
           wedgeSlope: this.wedgeSlope,
           wedgeBaseHeight: this.wedgeBaseHeight,
           length: this.flipperLengthFromPivot,
-          axis: this.axis[side]
+          axis: this.axis[side],
+          body: flipperBody
         },
         side,
         hitArea,

@@ -2,7 +2,7 @@ import * as CANNON from 'cannon-es';
 import { BALL_CONFIG } from './config';
 import { BALL } from '@src/App.config';
 
-export function Ball ({ world }) {
+export const Ball = ({ world, placement }) => {
   const {
     mass,
     radius,
@@ -11,33 +11,38 @@ export function Ball ({ world }) {
     collisionFilterGroup,
     collisionFilterMask
   } = BALL_CONFIG;
-  this.position = position;
-  this.spawn = this.spawn.bind(this);
-  this.bodyRef = this.bodyRef.bind(this);
-  this.body = new CANNON.Body({
+  const [placementX, placementY, placementZ ] = placement;
+  const {x:positionX, y:positionY, z:positionZ } = position;
+  const spawnPoint = new CANNON.Vec3(
+    positionX + placementX,
+    positionY + placementY,
+    positionZ + placementZ )
+  const body = new CANNON.Body({
     mass, 
     material,
-    position,
+    position: spawnPoint,
     collisionFilterGroup,
     collisionFilterMask
     }
   );
   const shape = new CANNON.Sphere(radius);
-  this.body.addShape(shape);
-  world.addBody(this.body);
-}
+  body.addShape(shape);
+  world.addBody(body);
 
-Ball.prototype.spawn = function () {
-  const { x, y, z } = this.position;
-  this.body.position.x = x;
-  this.body.position.y = y;
-  this.body.position.z = z;
+  const spawn = () => {
+    const { x, y, z } = spawnPoint;
+    body.position.x = x;
+    body.position.y = y;
+    body.position.z = z;
 
-  this.body.velocity.x = 0;
-  this.body.velocity.y = 0;
-  this.body.velocity.z = BALL.spawnVelocity;
-}
+    body.velocity.x = 0;
+    body.velocity.y = 0;
+    body.velocity.z = BALL.spawnVelocity; // TODO assign vector
+  }
 
-Ball.prototype.bodyRef = function () {
-  return this.body;
+  return {
+    body,
+    bodyRef: () => body, // TODO change references to 'bodyRef' to 'body'
+    spawn
+  }
 }
