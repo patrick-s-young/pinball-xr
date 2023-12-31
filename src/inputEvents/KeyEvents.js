@@ -19,7 +19,6 @@ KeyEvents.prototype.addSubscriber = function ({
   keyAction,
   callBack
   }) {
-    console.log('addSubscriber, callBack', callBack)
     if (this.subscribers[keyAction][keyName] === undefined) {
       this.subscribers[keyAction][keyName] = [callBack];
     } else {

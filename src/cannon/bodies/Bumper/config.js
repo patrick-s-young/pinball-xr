@@ -2,7 +2,7 @@ import * as CANNON from 'cannon-es';
 import { bumperMaterial } from '@cannon/materials';
 import { PLAYFIELD } from '@src/App.config';
 import { bumperCollisionHandler, COLLISION_GROUPS } from '@cannon/collisions';
-const SCALER = 0.0584;
+const SCALER = 0.0584; // TODO bake scaler values into vectors
 
 export const BUMPER_CONFIG = {
   collisionFilterGroup: COLLISION_GROUPS.PLAYFIELD,
@@ -23,17 +23,26 @@ export const BUMPER_CONFIG = {
   locations: [    
     {
       bumperName: 'upper_left_bumper',
-      offset: new CANNON.Vec3(-2 * SCALER + PLAYFIELD.offsetX, 0.5 * SCALER, -5 * SCALER),
+      offset: new CANNON.Vec3(
+        -2 * SCALER + PLAYFIELD.offsetX, 
+        0.0584 * .5, 
+        -6 * SCALER),
       quaternion: PLAYFIELD.slopeQuaternion
     },
     {
       bumperName: 'upper_right_bumper',
-      offset: new CANNON.Vec3(2 * SCALER + PLAYFIELD.offsetX * SCALER, 0.5 * SCALER, -5 * SCALER),
+      offset: new CANNON.Vec3(
+        2 * SCALER + PLAYFIELD.offsetX * SCALER, 
+        0.0584 * .5, 
+        -6 * SCALER),
       quaternion: PLAYFIELD.slopeQuaternion
     },
     {
       bumperName: 'lower_center_bumper',
-      offset: new CANNON.Vec3(0  + PLAYFIELD.offsetX * SCALER, 0.5 * SCALER, -2 * SCALER),
+      offset: new CANNON.Vec3(
+        PLAYFIELD.offsetX * SCALER, 
+        0.0584 * .5, 
+        -4 * SCALER),
       quaternion: PLAYFIELD.slopeQuaternion
     }
   ]

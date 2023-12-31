@@ -1,7 +1,8 @@
+import * as CANNON from 'cannon-es';
 import { Body } from 'cannon-es';
 import { DRAIN_TRIGGER_CONFIG } from './config';
 
-export function DrainTrigger ({ world }) {
+export function DrainTrigger ({ world, placement }) {
 
   const {
     mass,
@@ -18,8 +19,14 @@ export function DrainTrigger ({ world }) {
     collisionFilterMask
     }
   );
+  const { x:offsetX, y:offsetY, z:offsetZ } = elements.drainTrigger.offset;
+  const [placementX, placementY, placementZ ] = placement;
+  const offset = new CANNON.Vec3(
+    offsetX + placementX,
+    offsetY + placementY,
+    offsetZ + placementZ )
 
-  this.body.addShape(elements.drainTrigger.shape, elements.drainTrigger.offset);
+  this.body.addShape(elements.drainTrigger.shape, offset);
   world.addBody(this.body);
 }
 

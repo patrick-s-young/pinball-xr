@@ -4,9 +4,10 @@ const PXREvent = new EventTarget();
 const DRAIN_EVENT = new Event('DRAIN_EVENT');
 
 const InitTriggers = ({ 
-  cannon
+  cannon,
+  placement
 }) => {
-  const drainTrigger = new DrainTrigger({ world: cannon.world });
+  const drainTrigger = new DrainTrigger({ world: cannon.world, placement });
   drainTrigger.addCollideDispatch(() => PXREvent.dispatchEvent(DRAIN_EVENT));
   PXREvent.addEventListener('DRAIN_EVENT', () => {
     cannon.shooterLane.onOpen();

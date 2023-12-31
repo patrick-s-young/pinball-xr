@@ -1,18 +1,21 @@
 import * as CANNON from 'cannon-es';
 import { PLAYFIELD_CONFIG } from './config';
+import { HEIGHT_ABOVE_FLOOR } from '../../../App.config';
 
-export function Playfield ({ world }) {
-  this.body = new CANNON.Body({
+export const Playfield = ({ 
+  world,
+  placement }) => {
+  const body = new CANNON.Body({
     mass: 0, 
     material: PLAYFIELD_CONFIG.playFieldMaterial ,
-    position: new CANNON.Vec3(0, 0, 0),
+    position: new CANNON.Vec3(...placement),
     collisionFilterGroup: PLAYFIELD_CONFIG.collisionGroup
     }
   );
   PLAYFIELD_CONFIG.elements.forEach(item => {
     const { props, offset, quaternion, computeShape } = item;
     const shape = computeShape(props);
-    this.body.addShape(shape, offset, quaternion)
+    body.addShape(shape, offset, quaternion)
     }
   );
 
@@ -20,13 +23,18 @@ export function Playfield ({ world }) {
     const { props, computeCompositeShape } = item;
     const compositeShape = computeCompositeShape(props);
     compositeShape.forEach(({ shape, offset, orientation }) => {
-      this.body.addShape(shape, offset, orientation);
+      body.addShape(shape, offset, orientation);
     })
  
     }
   );
   
-  this.body.quaternion.copy(PLAYFIELD_CONFIG.quaternionPlayfieldSlope);
-  world.addBody(this.body);
+  body.quaternion.copy(PLAYFIELD_CONFIG.quaternionPlayfieldSlope);
+  world.addBody(body);
+
+
+  return {
+    body
+  }
 
 }

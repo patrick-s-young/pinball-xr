@@ -8,7 +8,7 @@ export function DebugFloor({
   const texture = loader.load('/models/floor/checkerboard.png');
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.x = texture.repeat.y = 40;
+  texture.repeat.x = texture.repeat.y = 3;
   let body;
 
   const material = new THREE.MeshBasicMaterial({

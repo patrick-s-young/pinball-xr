@@ -44,10 +44,10 @@ export const getContactFrame = ({
     }
 
     // STEP 1
-      distance.pivotToBallCenter = Math.sqrt(Math.pow(ball.position.x - flipper.axis.x, 2) + Math.pow(ball.position.z - flipper.axis.z, 2));
+      distance.pivotToBallCenter = Math.sqrt(Math.pow(ball.position.x - flipper.body.position.x, 2) + Math.pow(ball.position.z - flipper.body.position.z, 2));
 //console.log('STEP 1: distance.pivotToBallCenter', distance.pivotToBallCenter)
     // STEP 2
-      angle.pivotToBallCenter = Math.atan((ball.position.z - flipper.axis.z) / (ball.position.x - flipper.axis.x));
+      angle.pivotToBallCenter = Math.atan((ball.position.z - flipper.body.position.z) / (ball.position.x - flipper.body.position.x));
       if (side === 'right') angle.pivotToBallCenter += Math.PI;
 //console.log('STEP 2: angle.pivotToBallCenter', angle.pivotToBallCenter)
     // STEP 3
@@ -103,11 +103,11 @@ export const getContactFrame = ({
         0,
         tangentVelocity.z * maxVelocity * flipperMagnitude
       );
-      const zFactor = -2;
+      const zFactor = -.0461535809//-2;
       const xFactor = ball.position.x * zFactor / ball.position.z;
       const ballContactPosition = {
-        x: ball.position.x + xFactor,
-        y: ball.position.y,
+        x: ball.position.x,// + xFactor,
+        y: ball.position.y + 0.00303243609,
         z: ball.position.z + zFactor
       }
 

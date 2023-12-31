@@ -1,7 +1,9 @@
+
 import { getQuaternion } from '@math';
 const PLAYFIELD_SLOPE_DEG = 6.5;
 const OUTLANE_CURVE_DEG = 16;
 const GRAVITY = -9.82;
+export const HEIGHT_ABOVE_FLOOR = 0.91;
 
 export const BALL = {
   mass: 0.08,
@@ -20,10 +22,10 @@ export const PLAYFIELD = {
   get rightOutLaneQuaternion () { return getQuaternion({x: 0, y: 1, z: 0 }, this.outLaneRadians) },
 }
 
+
 export const WORLD = {
   gravity: [0 , GRAVITY, 0 ]
 }
-
 
 export const CONTACT_MATERIALS = {
   ballAndPlayfield: {
@@ -41,5 +43,5 @@ export const CONTACT_MATERIALS = {
 }
 
 export const CAMERA = {
-  position: { x: 0, y: .7, z: .8 }
+  position: [0, 1.9, .7 ]
 }
