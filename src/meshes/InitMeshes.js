@@ -1,9 +1,9 @@
 import { Reticle } from './Reticle';
-import { DebugFloor } from './DebugFloor';
+import { DebugFloorMesh } from '@debug/DebugFloorMesh';
 
 const InitMeshes = () => {
   const reticle = Reticle();
-  const debugFloor =  DebugFloor({  
+  const debugFloor =  DebugFloorMesh({  
     position: [0, 0, 0],
     size: [6, 6]
   });

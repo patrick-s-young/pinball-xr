@@ -1,10 +1,9 @@
 import * as CANNON from 'cannon-es';
-import { COLLISION_GROUPS } from '@cannon/collisions';
+import { COLLISION_GROUPS } from '@cannon/collisions/COLLISION_GROUPS';
 import { CannonWedge } from '@cannon/shapes';
-import { createFlipperBody, getContactFrame } from './helpers';
-import { PLAYFIELD } from '@src/App.config';
-import { flipperMaterial } from '@cannon/materials';
-import { HEIGHT_ABOVE_FLOOR } from '../../../App.config';
+import { createFlipperBody, getContactFrame } from './WedgeFlipper.helpers';
+import { PLAYFIELD, HEIGHT_ABOVE_FLOOR } from '@src/App.config';
+import { MATERIALS } from '@cannon/materials/MATERIALS';
 
 const SCALER = 0.0584;
 
@@ -61,7 +60,7 @@ export const initFlipper = {
       mass: 0,
       isTrigger: true,
       position: this.getAxis({ side, placement }),
-      material: flipperMaterial,
+      material: MATERIALS.flipperMaterial,
       collisionFilterGroup: COLLISION_GROUPS.FLIPPER,
       shape: this.shape,
       shapeOffset: this.shapeOffset,

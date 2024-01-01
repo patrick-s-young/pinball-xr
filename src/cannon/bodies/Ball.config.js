@@ -1,6 +1,6 @@
 import * as CANNON from 'cannon-es';
-import { COLLISION_GROUPS } from '@cannon/collisions';
-import { ballMaterial } from '@cannon/materials';
+import { COLLISION_GROUPS } from '@cannon/collisions/COLLISION_GROUPS';
+import { MATERIALS } from '@cannon/materials/MATERIALS';
 import { PLAYFIELD } from '@src/App.config';
 import { BALL } from '@src/App.config';
 
@@ -13,7 +13,7 @@ export const BALL_CONFIG = {
     4.75 * SCALER + PLAYFIELD.offsetX, 
     -PLAYFIELD.slopeSin * 9.75 * SCALER + 0.25 * SCALER, 
     PLAYFIELD.slopeCos * 9.75 * SCALER), 
-  material: ballMaterial,
+  material: MATERIALS.ballMaterial,
   collisionFilterGroup: COLLISION_GROUPS.BALL,
   collisionFilterMask: COLLISION_GROUPS.PLAYFIELD | COLLISION_GROUPS.FLIPPER
 }

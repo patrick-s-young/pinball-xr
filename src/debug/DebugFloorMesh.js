@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export function DebugFloor({
+export function DebugFloorMesh({
   position = [0, 0, 0],
   size = [10, 10]
 }) {

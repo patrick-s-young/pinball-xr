@@ -1,6 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { PLAYFIELD_CONFIG } from './config';
-import { HEIGHT_ABOVE_FLOOR } from '../../../App.config';
+import { PLAYFIELD_CONFIG } from './Playfield.config';
 
 export const Playfield = ({ 
   world,

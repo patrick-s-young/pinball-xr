@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import InitThree from '@three/InitThree';
 import InitCannon from '@cannon/InitCannon';
-import InitKeyEvents from './inputEvents/InitKeyEvents';
-import InitMeshes from './meshes/InitMeshes';
-import InitTriggers from './cannon/triggers/InitTriggers';
+import InitKeyEvents from '@debug/InitKeyEvents';
+import InitMeshes from '@meshes/InitMeshes';
+import InitTriggers from '@cannon/triggers/InitTriggers';
 import CannonDebugger from 'cannon-es-debugger';
 import { HEIGHT_ABOVE_FLOOR } from './App.config';
 

@@ -1,5 +1,4 @@
-import * as CANNON from 'cannon-es';
-import { initFlipper } from './config';
+import { initFlipper } from './WedgeFlipper.config';
 // TODO refactor WedgeFlipper into smaller modules that separate concerns
 export function WedgeFlipper ({
   world,

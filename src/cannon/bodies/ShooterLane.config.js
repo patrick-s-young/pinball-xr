@@ -1,12 +1,12 @@
 import * as CANNON from 'cannon-es';
-import { playFieldMaterial } from '@cannon/materials';
+import { MATERIALS } from '@cannon/materials/MATERIALS';
 import { PLAYFIELD } from '@src/App.config';
-import { COLLISION_GROUPS } from '@cannon/collisions';
+import { COLLISION_GROUPS } from '@cannon/collisions/COLLISION_GROUPS';
 
 const SCALER = 0.0584;
 export const SHOOTER_LANE_CONFIGS = {
   quaternionPlayfieldSlope: PLAYFIELD.slopeQuaternion,
-  playFieldMaterial,
+  playFieldMaterial: MATERIALS.playFieldMaterial,
   collisionGroup: COLLISION_GROUPS.PLAYFIELD,
   shapes: {
     shooterLaneOpen: {

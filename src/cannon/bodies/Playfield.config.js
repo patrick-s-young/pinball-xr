@@ -1,14 +1,14 @@
 import * as CANNON from 'cannon-es';
-import { playFieldMaterial } from '@cannon/materials';
+import { MATERIALS } from '@cannon/materials/MATERIALS';
 import { CannonRect, CannonCurve, CannonOrbit } from '@cannon/shapes';
 import { PLAYFIELD } from '@src/App.config';
-import { COLLISION_GROUPS } from '@cannon/collisions';
+import { COLLISION_GROUPS } from '@cannon/collisions/COLLISION_GROUPS';
 
 const SCALER = 0.0584;
 export const PLAYFIELD_CONFIG = {
   quaternionPlayfieldSlope: PLAYFIELD.slopeQuaternion,
   collisionGroup: COLLISION_GROUPS.PLAYFIELD,
-  playFieldMaterial,
+  playFieldMaterial: MATERIALS.playFieldMaterial,
   compositeElements: [
     {
       descripiton: 'Orbit',

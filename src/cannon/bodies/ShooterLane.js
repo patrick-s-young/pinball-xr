@@ -1,6 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { SHOOTER_LANE_CONFIGS } from './config';
-import { HEIGHT_ABOVE_FLOOR } from '../../../App.config';
+import { SHOOTER_LANE_CONFIGS } from './ShooterLane.config';
 
 export const ShooterLane = ({ 
   world,

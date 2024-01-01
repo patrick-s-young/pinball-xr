@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es'
-import { BUMPER_CONFIG } from './config';
+import { BUMPER_CONFIG } from './Bumper.config';
 
 export const Bumper = ({ 
   world,
