@@ -14,7 +14,6 @@ export function Scene() {
     }
   }
 
-
   return {
     get self() { return scene },
     add

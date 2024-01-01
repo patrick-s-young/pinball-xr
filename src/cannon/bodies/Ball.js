@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { BALL_CONFIG } from './config';
+import { BALL_CONFIG } from './Ball.config';
 import { BALL } from '@src/App.config';
 
 export const Ball = ({ world, placement }) => {

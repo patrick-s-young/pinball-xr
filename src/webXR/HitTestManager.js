@@ -1,5 +1,3 @@
-
-
 export const HitTestManager = ({ xrSession }) => {
   let hitTestSource = null;
   let hitTestSourceRequested = false;

@@ -1,12 +1,13 @@
 import * as CANNON from 'cannon-es';
-import { bumperMaterial } from '@cannon/materials';
+import { MATERIALS } from '@cannon/materials/MATERIALS';
 import { PLAYFIELD } from '@src/App.config';
-import { bumperCollisionHandler, COLLISION_GROUPS } from '@cannon/collisions';
+import { bumperCollisionHandler } from '@cannon/collisions/bumperCollisionHandler';
+import { COLLISION_GROUPS } from '@cannon/collisions/COLLISION_GROUPS';
 const SCALER = 0.0584; // TODO bake scaler values into vectors
 
 export const BUMPER_CONFIG = {
   collisionFilterGroup: COLLISION_GROUPS.PLAYFIELD,
-  material: bumperMaterial,
+  material: MATERIALS.bumperMaterial,
   bumperCollisionHandler,
   shapeProps: {
     radiusTop: 0.0438,

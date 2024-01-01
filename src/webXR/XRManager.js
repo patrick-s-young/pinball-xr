@@ -1,5 +1,3 @@
-
-
 export function XRManager({ 
   startButton,
   onReady

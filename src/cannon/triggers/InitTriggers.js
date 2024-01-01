@@ -1,4 +1,4 @@
-import { DrainTrigger } from '@cannon/triggers';
+import { DrainTrigger } from '@cannon/triggers/DrainTrigger';
 
 const PXREvent = new EventTarget();
 const DRAIN_EVENT = new Event('DRAIN_EVENT');

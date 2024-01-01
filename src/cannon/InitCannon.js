@@ -10,7 +10,7 @@ import {
   Bumper, 
   ShooterLane } from '@cannon/bodies';
 // Materials
-import { initContactMaterials } from '@cannon/materials';
+import { initContactMaterials } from '@cannon/materials/initContactMaterials';
 
 const InitCannon = ({ 
   world,
