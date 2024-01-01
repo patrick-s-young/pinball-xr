@@ -1,28 +1,5 @@
 import * as CANNON from 'cannon-es';
 
-export const createFlipperBody = ({
-  world,
-  mass,
-  isTrigger,
-  position,
-  material,
-  collisionFilterGroup,
-  shape,
-  shapeOffset   
-  }) => {
-  const body = new CANNON.Body({
-    mass,
-    isTrigger,
-    position,
-    material,
-    collisionFilterGroup
-  });
-  body.addShape(shape, shapeOffset);
-  world.addBody(body);
-  return body;
-}
-
-
 export const getContactFrame = ({
   ball,
   flipper,
