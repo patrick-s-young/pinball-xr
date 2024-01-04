@@ -12,7 +12,7 @@ export const bumperCollisionHandler = (e) => {
   const impulseScaler = 3;
   const impulse = new CANNON.Vec3(
      (xBall - xBumper) * impulseScaler, 
-      yBall, 
+      0, 
      (zBall - zBumper) * impulseScaler
   );
   const worldPoint = new CANNON.Vec3( 

@@ -171,7 +171,6 @@ export function WedgeFlipper ({
     if (flipperCollisionResults !== null) {
       const { ballVelocity, ballPosition } = flipperCollisionResults; 
       ballState.ref.velocity.set(...Object.values(ballVelocity));
-      //console.log('Object.values( collisionState.impact.position )', Object.values( collisionState.impact.position ))
       ballState.ref.position.set(...Object.values(ballPosition));
     }
   // CHECK IF LAST ANIMATION FRAME HAS BEEN RENDERED
