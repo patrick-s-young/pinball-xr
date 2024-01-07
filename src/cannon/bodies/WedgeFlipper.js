@@ -81,7 +81,6 @@ export function WedgeFlipper ({
 
 // CREATE ANIMATION & DEFINE HIT AREAS
   const { animation, hitAreas } = createAnimation({ side }); //TODO move to helpers
-
 // CREATE FLIPPER CANNON BODY
   const body = new CANNON.Body({
     mass: 0,
@@ -160,6 +159,7 @@ export function WedgeFlipper ({
             wedgeBaseHeight,
             length: flipperLengthFromPivot,
             axis: axis[side],
+            endRadian: endRadian[side],
             body
           },
           side,
@@ -200,6 +200,7 @@ export function WedgeFlipper ({
       playfieldSlope.mult(quatAnimStep, quatMult);
       animation.push(quatMult);
     }
+    console.log('flipperAngles', flipperAngles)
     const hitAreas = flipperAngles.map((angle, idx) => {
       const hitArea = { min: null, max: null, minDegrees: null, maxDegrees: null };
       if (idx > 0) {
