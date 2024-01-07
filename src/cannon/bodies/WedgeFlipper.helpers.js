@@ -31,9 +31,8 @@ export const getContactFrame = ({
   // STEP 4: Distance between pivot and ball radius (extending perpendicular to angle.pivotToBallCenter)
   distance.pivotToBallSurface = Math.abs(ball.radius / Math.sin(angle.ballCenterToPivotToBallSurface));
 
-  // TEST: IS THE BALL CLOSE ENOUGH TO HIT?
+  // EXIT TEST: IS THE BALL CLOSE ENOUGH TO HIT?
   if (distance.pivotToBallSurface > flipper.length) {
-    console.log('ball not close enough to hit', distance.pivotToBallSurface)
     return null;
   }
 
@@ -49,23 +48,32 @@ export const getContactFrame = ({
     angle.flipperAngleOfContact = side === 'right' ?
       angle.flipperRotationAtPointOfContact - flipper.wedgeSlope
     : angle.flipperRotationAtPointOfContact + flipper.wedgeSlope;
-  // STEP 9: Test if ball is within current hitArea
+  // STEP 9: Derive tangent of flipper rotation
   const { min, max } = hitArea;
   let tangentVelocity = undefined;
-  if (side === 'left' && angle.flipperRotationAtPointOfContact > min && angle.flipperRotationAtPointOfContact < max ) {
+  if (side === 'left' 
+    && angle.flipperRotationAtPointOfContact > min 
+    && angle.flipperRotationAtPointOfContact < max ) {
     tangentVelocity = {
       x: -Math.sin(angle.flipperAngleOfContact),
       z: -Math.cos(angle.flipperAngleOfContact)
     }
   }
-  if (side === 'right' && angle.flipperRotationAtPointOfContact < min && angle.flipperRotationAtPointOfContact > max) {
+  if (side === 'right' 
+    && angle.flipperRotationAtPointOfContact < min 
+    && angle.flipperRotationAtPointOfContact > max) {
     tangentVelocity = {
       x: Math.sin(angle.flipperAngleOfContact),
       z: Math.cos(angle.flipperAngleOfContact)
     }
   }
-  if (tangentVelocity === undefined) return null;
-  // STEP 10: Derive velocity vector and position for rebounded ball
+  // EXIT TEST: Is ball within current hit area?
+  if (tangentVelocity === undefined) {
+    return null;
+  }
+
+
+  // STEP 10: Derive velocity vector based on position of ball relative to pivot
   const flipperMagnitude = distance.pivotToBallSurface / flipper.length;
   const velocity = new CANNON.Vec3(
     tangentVelocity.x * maxVelocity * flipperMagnitude,
@@ -73,14 +81,16 @@ export const getContactFrame = ({
     tangentVelocity.z * maxVelocity * flipperMagnitude
   );
   // STEP 11: Position ball above flipper (in up position)
-  const zFactor = -.15;
-  const xFactor = ball.position.x * zFactor / ball.position.z;
+  const zOffsetToFlipperUp = Math.sin(flipper.endRadian) * Math.abs(ball.position.x - flipper.axis.x);
+  const xOffsetToFlipperUp = Math.tan(angle.flipperAngleOfContact) * zOffsetToFlipperUp;
+  const zPositionAboveFlipperUp = flipper.axis.z - zOffsetToFlipperUp - (ball.radius * 1.1);
+  const xPositionAboveFlipperUp = ball.position.x - xOffsetToFlipperUp;
   const ballContactPosition = {
-    x: ball.position.x,// + xFactor,
-    y: ball.position.y + .01, // - Math.sin(PLAYFIELD.slopeRadians) * xFactor,
-    z: ball.position.z + zFactor
+    x: xPositionAboveFlipperUp,
+    y: ball.position.y + .01, // TODO: derive from playfiled slope and zOffsetToFlipperUp
+    z: zPositionAboveFlipperUp
   }
 
-    return {  ballVelocity: velocity, ballPosition: ballContactPosition };
+  return {  ballVelocity: velocity, ballPosition: ballContactPosition };
   }
 
