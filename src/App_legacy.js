@@ -227,6 +227,7 @@ export const App = () => {
     cannonDebugger.update();
     leftFlipper.step();
     rightFlipper.step();
+    delta
     delta = Math.min(clock.getDelta(), 0.1)
     world.step(timeStep, delta, maxSubSteps);   
     renderer.render(scene, camera)

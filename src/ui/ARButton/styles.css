@@ -1,0 +1,11 @@
+.ARButton {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+}
+
+button {
+  width: 40vw;
+  height: 10vh;
+}
