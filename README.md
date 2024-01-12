@@ -3,22 +3,26 @@
 
 Real-world pinball differs from a video game in that the player is continuously moving their gaze over a physical playfield (like a spectator watching a tennis game).
 
-Given the challenges of moving around in VR, standing in front of a virtual pinball machine might be a good candidate for an immersive experience.
+Given the current strengths and weaknesses of mobile-based AR, standing in front of a virtual pinball machine could be a compelling mixed-reality experience.
 
 ### Approach
 This project will be in three phases:
 1. A [cannon-es](https://github.com/pmndrs/cannon-es) wireframe that establishes the physics of gameplay.
-2. A Three.js 'skin' for the Cannon wireframe (plus sound design).
-3. ARCore implementation. 
+2. ARCore implementation. 
+3. A Three.js 'skin' on top of the cannon-es physics bodies (plus sound design).
 
 ### Tools
 I am initially developing in vanilla Javascript - along with [cannon-es](https://github.com/pmndrs/cannon-es) - with an eye on refactoring to incorporate [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and [zustand](https://github.com/pmndrs/zustand).
 
 
 ### Progress
-I am currently in the first phase of establishing the physics behavior (see below). Due to the speed of both the ball and the flipper animation, Cannon's collision detection does not work consistently at the target 60fps. As a workaround, I created a collision detection method that estimates the point of contact between the ball and the flipper. Given the point of contact along the length of the flipper, the flipper's angle, and the speed of the ball, a rebound vector is generated (still work in progress).
+I am establishing a baseline for the pinball game's physics behavior in WebXR. The videos below depict cannon-es in debugger mode. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
 
+WebXR mode 'yarn start'
 
+https://github.com/patrick-s-young/pinball-xr/assets/42591798/183ca26b-f026-4679-96cc-62b63bbda7bf
+
+Emulation mode 'yarn dev'
 
 https://github.com/patrick-s-young/pinball-xr/assets/42591798/b6b28d8c-4b32-42d3-8488-d6a1503cda5b
 
@@ -30,8 +34,9 @@ Make sure you have [Node.js](http://nodejs.org/) installed.
 ```sh
 git clone https://github.com/patrick-s-young/pinball-xr.git # or clone your own fork
 cd pinball-xr
-npm install
-npm start
+yarn (to install)
+yarn start (for WebXR mode)
+yarn dev (for AR emulation mode)
 ```
 - Left Flipper: A Key
 - Right Fipper: L Key
