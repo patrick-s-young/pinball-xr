@@ -1,4 +1,4 @@
-# pinball-ar
+# pinball-xr
 ## A three.js and cannon-es webxr pinball web app.
 
 Real-world pinball differs from a video game in that the player is continuously moving their gaze over a physical playfield (like a spectator watching a tennis game).
