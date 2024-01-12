@@ -7,114 +7,116 @@ import InitMeshes from '@meshes/InitMeshes';
 import InitTriggers from '@cannon/triggers/InitTriggers';
 import CannonDebugger from 'cannon-es-debugger';
 import { HEIGHT_ABOVE_FLOOR } from './App.config';
-
-const TIME_STEP = 1/60;
-const MAX_SUB_STEPS = 10;
+// webXR
+import {
+  HitTestManager,
+  XRManager } from '@webXR';
+// ui
+import {
+  ARButton } from '@ui/ARButton';
 
 //////////////////
 // BEGIN COMPONENT
-export const App = ({ isDebugMode = false }) => {
+export const App = () => {
+  console.log('in App')
   let animationUpdate = [];
   const clock = new THREE.Clock();
-  let delta;
 
-  const three = InitThree({ isDebugMode });
-  const meshes = InitMeshes();
+
+  const three = InitThree({ isDebugMode: false });
+  const meshes = InitMeshes({ isDebugMode: false });
   let cannon = {
     world: new CANNON.World()
   }
   let triggers;
-  let keyEvents;
 
-  const cannonDebugger = isDebugMode 
-    ? new CannonDebugger(three.scene.self, cannon.world) 
-    : null;
 
   three.scene.add([
     meshes.reticle.mesh
   ]);
+  // XR MANAGER
+  const xrManager = XRManager({ startButton: ARButton(), onReady });
+  let hitTestManager;
+  let hitTestActive = true;
+ 
 
 
-
-  if (isDebugMode) {
-    animationUpdate.push(
-      { name: 'cannonDebugger', update: () => cannonDebugger.update()},
-      { name: 'orbitControls', update: () => three.orbitControls.update()}
-    );
-    three.scene.add([
-      meshes.debugFloor.mesh,
-    ]);
+  // XR SESSION READY
+  async function onReady () {
+    hitTestManager = HitTestManager({ xrSession: xrManager.xrSession });
+    xrManager.setOnSelectCallback(onSelectCallback);
+    meshes.reticle.visible = true;
+    animationUpdate.push({ name: 'reticle', update: (dt) => meshes.reticle.updateMixer(dt)});
+    three.renderer.setReferenceSpaceType( 'local' );
+    three.renderer.setSession( xrManager.xrSession  );
+    three.renderer.setAnimationLoop(animationLoopCallback);
   }
 
 
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
+  // ON SCREEN TAP
+  const onSelectCallback = (ev) => {
+    if (hitTestActive === false) return;
+    if (meshes.reticle.visible) {
+      const { x, y, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
+      console.log('y:',y)
+      meshes.reticle.visible = false;
+      animationUpdate = animationUpdate.filter(item => item.name === 'reticle');
+      hitTestActive = false;
+      meshes.reticle.visible = false; 
 
-const hitTest = {
-  raycaster: new THREE.Raycaster(),
-  pointer: new THREE.Vector2()
+      const cannonDebugger = new CannonDebugger(three.scene.self, cannon.world);
+      cannon = {
+        ...InitCannon({ world: cannon.world, placement: [x, y + HEIGHT_ABOVE_FLOOR, z] })
+      }
+    
+      triggers = InitTriggers({ cannon, placement: [x,  y + HEIGHT_ABOVE_FLOOR, z] });
+      animationUpdate.push(
+        { name: 'cannonDebugger', update: () => cannonDebugger.update()},
+        { name: 'cannonLeftFlipper', update: () => cannon.leftFlipper.step()},
+        { name: 'cannonRightFlipper', update: () => cannon.rightFlipper.step()}
+      );
+      setTimeout(cannon.ball.spawn, 1000);
+      setTimeout(cannon.shooterLane.onClose, 3000);
+    }
 }
 
-function initDebug () {
-  meshes.reticle.visible = true;
-  animationUpdate.push(
-    { name: 'reticle', update: (dt) => meshes.reticle.updateMixer(dt)}
-  );
-  three.renderer.domElement.addEventListener('pointermove', onPointerMove);
-  three.renderer.domElement.addEventListener('click', onClick);
-}
 
-function onPointerMove(event) { 
-  hitTest.pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1; 
-  hitTest.pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1; 
-  hitTest.raycaster.setFromCamera( hitTest.pointer, three.camera.self );
-  const intersects = hitTest.raycaster.intersectObject(meshes.debugFloor.mesh); 
-  if (intersects.length > 0) meshes.reticle.setPosition(intersects[0].point);
-}
 
-const onClick = () => {
-  three.renderer.domElement.removeEventListener('pointermove', onPointerMove);
-  three.renderer.domElement.removeEventListener('click', onClick);
-  // reticle
-  const { x, y, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
-  meshes.reticle.visible = false;
-  animationUpdate = animationUpdate.filter(item => item.name !== 'reticle');
-  cannon = {
-    ...InitCannon({ world: cannon.world, placement: [x, HEIGHT_ABOVE_FLOOR, z] })
+  let dt;
+  const timeStep = 1/60;
+  const maxSubSteps = 10;
+
+  function animationLoopCallback(timestamp, frame) {
+    let hitPoseTransformMatrix = [];
+    if ( frame && hitTestActive === true) {
+      if ( hitTestManager.hitTestSourceRequested === false ) hitTestManager.requestHitTestSource();
+      hitPoseTransformMatrix = hitTestManager.hitTestSource ? hitTestManager.getHitTestResults(frame) : [];
+      if (hitPoseTransformMatrix.length > 0) {
+        meshes.reticle.visible = true;
+        meshes.reticle.setMatrixFromArray(hitPoseTransformMatrix);
+      } else {
+        meshes.reticle.visible = false;
+      }
+    }
+    dt = Math.min(clock.getDelta(), 0.1);
+    cannon.world.step(timeStep, dt, maxSubSteps);   
+    animationUpdate.forEach(item => item.update(dt));
+    three.renderer.render(three.scene.self, three.camera.self);
   }
 
-  triggers = InitTriggers({ cannon, placement: [x, HEIGHT_ABOVE_FLOOR, z] });
-  keyEvents = InitKeyEvents({
-    leftFlipper: cannon.leftFlipper,
-    rightFlipper: cannon.rightFlipper
-  });
-  animationUpdate.push(
-    { name: 'cannonLeftFlipper', update: () => cannon.leftFlipper.step()},
-    { name: 'cannonRightFlipper', update: () => cannon.rightFlipper.step()}
-  );
-    // start
-    setTimeout(cannon.ball.spawn, 1000);
-    setTimeout(cannon.shooterLane.onClose, 3000);
-}
-
-initDebug();
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
 
 
 
 
-
-
-  // animation loop
-  function animate() {
-    delta = Math.min(clock.getDelta(), 0.1)
-    cannon.world.step(TIME_STEP, delta, MAX_SUB_STEPS); 
-    animationUpdate.forEach(item => item.update(delta));
-    three.renderer.render( three.scene.self, three.camera.self );
-    requestAnimationFrame( animate );
-  }
-  animate();
+  // // animation loop
+  // function animate() {
+  //   const dt = clock.getDelta();
+  //   cannon.world.step(dt); 
+  //   animationUpdate.forEach(item => item.update(dt));
+  //   three.renderer.render( three.scene.self, three.camera.self );
+  //   requestAnimationFrame( animate );
+  // }
+ 
 }
 
 

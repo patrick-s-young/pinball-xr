@@ -3,12 +3,12 @@ import { getQuaternionFromAxisAngle } from '@math';
 const PLAYFIELD_SLOPE_DEG = 6.5;
 const OUTLANE_CURVE_DEG = 16;
 const GRAVITY = -9.82;
-export const HEIGHT_ABOVE_FLOOR = 0.91;
+export const HEIGHT_ABOVE_FLOOR = .6;
 
 export const BALL = {
   mass: 0.08,
   radius: 0.0146,
-  spawnVelocity: -5.1
+  spawnVelocity: -4.7
 }
 
 export const PLAYFIELD = {

@@ -32,7 +32,7 @@ export const Ball = ({ world, placement }) => {
   const spawn = () => {
     const { x, y, z } = spawnPoint;
     body.position.x = x;
-    body.position.y = y;
+    body.position.y = y + 0.01;
     body.position.z = z;
 
     body.velocity.x = 0;
