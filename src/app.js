@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import InitThree from '@three/InitThree';
 import InitCannon from '@cannon/InitCannon';
-import InitKeyEvents from '@debug/InitKeyEvents';
 import InitMeshes from '@meshes/InitMeshes';
 import InitTriggers from '@cannon/triggers/InitTriggers';
 import CannonDebugger from 'cannon-es-debugger';
+import { DirectionControls } from './ui/DirectionControls';
 import { HEIGHT_ABOVE_FLOOR } from './App.config';
 // webXR
 import {
@@ -18,7 +18,6 @@ import {
 //////////////////
 // BEGIN COMPONENT
 export const App = () => {
-  console.log('in App')
   let animationUpdate = [];
   const clock = new THREE.Clock();
 
@@ -39,7 +38,12 @@ export const App = () => {
   let hitTestManager;
   let hitTestActive = true;
  
-
+  // UI
+  const uiParent = document.createElement('div');
+  uiParent.style.position = 'absolute';
+  uiParent.style.visibility = 'hidden';
+  document.body.appendChild(uiParent);
+  let directionControls;
 
   // XR SESSION READY
   async function onReady () {
@@ -75,6 +79,15 @@ export const App = () => {
         { name: 'cannonLeftFlipper', update: () => cannon.leftFlipper.step()},
         { name: 'cannonRightFlipper', update: () => cannon.rightFlipper.step()}
       );
+
+      directionControls = DirectionControls({
+        uiParent,
+        leftFlipper: cannon.leftFlipper,
+        rightFlipper: cannon.rightFlipper
+      }) 
+      uiParent.style.visibility = 'visible';
+      directionControls?.enableTouch();
+
       setTimeout(cannon.ball.spawn, 1000);
       setTimeout(cannon.shooterLane.onClose, 3000);
     }
