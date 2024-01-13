@@ -1,79 +1,50 @@
-import { buttonRows } from "./configs";
+
 import './styles.css';
 
 export const DirectionControls = ({ 
-  uiParent, 
-  setDirection,
-  setClipAction,
-  camera }) => {
-// onTouchEnd delay before transition from 'Walk' to 'Idle'
-  let timeoutId;
-
+  uiParent,
+  leftFlipper,
+  rightFlipper }) => {
+  const flipperActions = {
+    LEFT: {
+      up: () => leftFlipper.onFlipperUp(),
+      down: () => leftFlipper.onFlipperDown()
+    },
+    RIGHT: {
+      up: () => rightFlipper.onFlipperUp(),
+      down: () => rightFlipper.onFlipperDown()
+    }
+  }
 // Button container
   const buttonContainer = document.createElement('div');
-  buttonContainer.className = 'ButtonContainer';
+  buttonContainer.className = 'buttonContainer';
   uiParent.appendChild(buttonContainer);
-// Button layout
-  const buttonLayout = document.createElement('div');
-  buttonLayout.className='ButtonLayout'
-  //Object.entries(buttonContainerStyles).forEach(([key, value]) => buttonContainer.style[key] = value);
-  buttonContainer.appendChild(buttonLayout);
-
-// Button rows
-  buttonRows.forEach(items => {
-    const rowContainer = document.createElement('div');
-    items.forEach(item => rowContainer.appendChild(navButton({ label: item })))
-    buttonLayout.appendChild(rowContainer);
-  });
-
-// Button
-  function navButton ({ label }) {
-    const button = document.createElement('div');
-    button.className='DirectionButton';
-    //Object.entries(buttonStyles).forEach(([key, value]) => button.style[key] = value);
-    button.style.backgroundColor = label === 'spacer' ? undefined : 'orange';
-    button.innerHTML = label === 'spacer' ? '&nbsp;' : `<img src='/images/arrow_${label}.png' />`;
-    button.id = label;
-    button.onpointerdown = label === 'spacer' ? undefined : (ev) => onTouchStart({ ev, label });
-    preventLongPressMenu(button);
-    return button;
-  }
-
-// Calculate up/right/down/left relative to device orientation
-  function onMove ({ ev, label }) {
-    const [x, y, z, w] = camera.quaternion.toArray();
-    const angle = 2 * Math.acos(w);
-    let s;
-    if (1 - w * w < 0.000001) {
-      s = 1;
-    } else {
-      s = Math.sqrt(1 - w * w);
-    }
-    const cameraYradians = y/s * angle;
-    const yAngle = { 
-      TOP: cameraYradians,
-      RIGHT: cameraYradians - Math.PI/2,
-      BOTTOM: cameraYradians + Math.PI,
-      LEFT: cameraYradians + Math.PI/2
-    }
-    setDirection(yAngle[label] );
-    setClipAction('Walk');
-  }
+  const leftFlipperButton = document.createElement('div');
+  leftFlipperButton.className = 'flipperButton'
+  leftFlipperButton.id = 'LEFT'
+  leftFlipperButton.onpointerdown = (ev) => onTouchStart(ev)
+  const rightFlipperButton = document.createElement('div');
+  rightFlipperButton.className = 'flipperButton';
+  rightFlipperButton.id = 'RIGHT'
+  rightFlipperButton.onpointerdown = (ev) => onTouchStart(ev)
+  buttonContainer.appendChild(leftFlipperButton);
+  buttonContainer.appendChild(rightFlipperButton)
+  preventLongPressMenu(leftFlipperButton);
+  preventLongPressMenu(rightFlipperButton);
 
 
   const enableTouch = () => buttonContainer.addEventListener('touchend', onTouchEnd);
 
-  const onTouchStart = ({ ev, label }) => {
-    if (['TOP', 'RIGHT', 'BOTTOM', 'LEFT'].includes(ev.target.parentNode.id) === false) return;
-    ev.target.parentNode.style.backgroundColor = '#FFD580'; 
-    clearTimeout(timeoutId);
-    onMove({ ev, label });
+  const onTouchStart = (ev) => {
+    const { id:flipperName } = ev.target;
+    if (['RIGHT', 'LEFT'].includes(flipperName) === false) return;
+    flipperActions[flipperName].up();
   }
 
   const onTouchEnd = (ev) => {
-    if (['TOP', 'RIGHT', 'BOTTOM', 'LEFT'].includes(ev.target.parentNode.id) === false) return;
-    ev.target.parentNode.style.backgroundColor = 'orange'; 
-    timeoutId = setTimeout(() => setClipAction('Idle'), 500);
+    const { id:flipperName } = ev.target;
+    if (['RIGHT', 'LEFT'].includes(flipperName) === false) return;
+    flipperActions[flipperName].down();
   }
 
   function absorbEvent_(event) {
@@ -88,7 +59,6 @@ export const DirectionControls = ({
   function preventLongPressMenu(node) {
     node.ontouchstart = absorbEvent_;
     node.ontouchmove = absorbEvent_;
-    //node.ontouchend = absorbEvent_;
     node.ontouchcancel = absorbEvent_;
   }
 
