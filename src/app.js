@@ -6,6 +6,7 @@ import InitMeshes from '@meshes/InitMeshes';
 import InitTriggers from '@cannon/triggers/InitTriggers';
 import CannonDebugger from 'cannon-es-debugger';
 import { DirectionControls } from './ui/DirectionControls';
+import Stats from 'stats.js';
 import { HEIGHT_ABOVE_FLOOR } from './App.config';
 // webXR
 import {
@@ -76,8 +77,8 @@ export const App = () => {
       triggers = InitTriggers({ cannon, placement: [x,  y + HEIGHT_ABOVE_FLOOR, z] });
       animationUpdate.push(
         { name: 'cannonDebugger', update: () => cannonDebugger.update()},
-        { name: 'cannonLeftFlipper', update: () => cannon.leftFlipper.step()},
-        { name: 'cannonRightFlipper', update: () => cannon.rightFlipper.step()}
+        { name: 'cannonLeftFlipper', update: (dt) => cannon.leftFlipper.step(dt)},
+        { name: 'cannonRightFlipper', update: (dt) => cannon.rightFlipper.step(dt)}
       );
 
       directionControls = DirectionControls({
@@ -93,13 +94,15 @@ export const App = () => {
     }
 }
 
-
-
-  let dt;
+  const stats = new Stats();
+  stats.showPanel(0);
+  document.body.appendChild(stats.dom);
+  let delta;
   const timeStep = 1/60;
-  const maxSubSteps = 10;
+  const maxSubSteps = 2;
 
   function animationLoopCallback(timestamp, frame) {
+    stats.begin()
     let hitPoseTransformMatrix = [];
     if ( frame && hitTestActive === true) {
       if ( hitTestManager.hitTestSourceRequested === false ) hitTestManager.requestHitTestSource();
@@ -111,24 +114,13 @@ export const App = () => {
         meshes.reticle.visible = false;
       }
     }
-    dt = Math.min(clock.getDelta(), 0.1);
-    cannon.world.step(timeStep, dt, maxSubSteps);   
-    animationUpdate.forEach(item => item.update(dt));
+    delta = clock.getDelta();
+    //dt = Math.min(delta, 0.1);
+    cannon.world.step(timeStep, delta, maxSubSteps);   
+    animationUpdate.forEach(item => item.update(delta));
     three.renderer.render(three.scene.self, three.camera.self);
+    stats.end();
   }
-
-
-
-
-
-  // // animation loop
-  // function animate() {
-  //   const dt = clock.getDelta();
-  //   cannon.world.step(dt); 
-  //   animationUpdate.forEach(item => item.update(dt));
-  //   three.renderer.render( three.scene.self, three.camera.self );
-  //   requestAnimationFrame( animate );
-  // }
  
 }
 

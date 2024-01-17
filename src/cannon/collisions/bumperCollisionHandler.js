@@ -11,7 +11,7 @@ export const bumperCollisionHandler = (e) => {
     z:zBumper } = e.target.position;//shapeOffsets[0];
   const impulseScaler = 3;
   const impulse = new CANNON.Vec3(
-     (xBall - xBumper) * impulseScaler, 
+     (xBall - xBumper) * impulseScaler + Math.random(), 
       0, 
      (zBall - zBumper) * impulseScaler
   );

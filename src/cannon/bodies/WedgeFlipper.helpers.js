@@ -1,5 +1,15 @@
 import * as CANNON from 'cannon-es';
 import { PLAYFIELD } from '@src/App.config';
+const playfieldSlopeQuat = new CANNON.Quaternion();
+playfieldSlopeQuat.setFromAxisAngle(new CANNON.Vec3( 1, 0, 0 ), PLAYFIELD.slopeRadians)
+
+export const getFlipperQuaternion = (radians) => {
+  const quatAnimStep = new CANNON.Quaternion();
+  quatAnimStep.setFromAxisAngle(new CANNON.Vec3( 0, 1, 0 ), radians);
+  const quatMult = new CANNON.Quaternion();
+  playfieldSlopeQuat.mult(quatAnimStep, quatMult);
+  return quatMult;
+}
 
 export const getContactFrame = ({
   ball,
