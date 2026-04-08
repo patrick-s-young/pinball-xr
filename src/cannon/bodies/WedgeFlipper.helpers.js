@@ -1,5 +1,7 @@
 import * as CANNON from 'cannon-es';
-import { PLAYFIELD } from '@src/App.config';
+
+const EPSILON = 1e-6;
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export const getContactFrame = ({
   ball,
@@ -20,27 +22,32 @@ export const getContactFrame = ({
     flipperRotationAtPointOfContact: undefined,
     flipperAngleOfContact: undefined
   }
-
+  const dx = ball.position.x - flipper.body.position.x;
+  const dz = ball.position.z - flipper.body.position.z;
   // STEP 1: Distance between ball center and flipper pivot
-  distance.pivotToBallCenter = Math.sqrt(Math.pow(ball.position.x - flipper.body.position.x, 2) + Math.pow(ball.position.z - flipper.body.position.z, 2));
+  distance.pivotToBallCenter = Math.max(Math.sqrt(dx ** 2 + dz ** 2), EPSILON);
+  //distance.pivotToBallCenter = Math.sqrt(Math.pow(ball.position.x - flipper.body.position.x, 2) + Math.pow(ball.position.z - flipper.body.position.z, 2));
   // STEP 2: Angle of ball center and flipper pivot
-  angle.pivotToBallCenter = Math.atan((ball.position.z - flipper.body.position.z) / (ball.position.x - flipper.body.position.x));
-  if (side === 'right') angle.pivotToBallCenter += Math.PI;
+  angle.pivotToBallCenter = Math.atan2(dz, dx);
+  // angle.pivotToBallCenter = Math.atan2(
+  //   ball.position.z - flipper.body.position.z,
+  //   ball.position.x - flipper.body.position.x
+  // );
   // STEP 3: Angle between flipper pivot, ball center, and ball radius (extending perpendicular to angle.pivotToBallCenter)
   angle.ballCenterToPivotToBallSurface = Math.atan(ball.radius / distance.pivotToBallCenter);
   // STEP 4: Distance between pivot and ball radius (extending perpendicular to angle.pivotToBallCenter)
   distance.pivotToBallSurface = Math.abs(ball.radius / Math.sin(angle.ballCenterToPivotToBallSurface));
-
   // EXIT TEST: IS THE BALL CLOSE ENOUGH TO HIT?
   if (distance.pivotToBallSurface > flipper.length) {
     return null;
   }
-
   // STEP 5: Distance between ball and center of flipper (along length axis)
-  //distance.wedgeCenterToBallSurface = (flipper.length - distance.pivotToBallSurface) / flipper.length * flipper.wedgeBaseHeight;
-  distance.wedgeCenterToBallSurface = flipper.length * flipper.wedgeBaseHeight * (flipper.length - distance.pivotToBallSurface);
+  distance.wedgeCenterToBallSurface =
+    ((flipper.length - distance.pivotToBallSurface) / flipper.length) * flipper.wedgeBaseHeight;
   // STEP 6: Flipper rotation between ball and center of flipper
-  angle.ballSurfaceToPivotToWedgeCenter = Math.asin(distance.wedgeCenterToBallSurface / distance.pivotToBallSurface);
+  angle.ballSurfaceToPivotToWedgeCenter = Math.asin(
+    clamp(distance.wedgeCenterToBallSurface / distance.pivotToBallSurface, -1, 1)
+  );
   // STEP 7: Derive flipper rotation at point of contact with ball
     angle.flipperRotationAtPointOfContact = side === 'left' ?
       angle.pivotToBallCenter - angle.ballCenterToPivotToBallSurface - angle.ballSurfaceToPivotToWedgeCenter
@@ -72,6 +79,10 @@ export const getContactFrame = ({
     return null;
   }
 
+  // Normalize vector
+  const mag = Math.sqrt(tangentVelocity.x ** 2 + tangentVelocity.z ** 2);
+  tangentVelocity.x /= mag;
+  tangentVelocity.z /= mag;
 
   // STEP 10: Derive velocity vector based on position of ball relative to pivot
   const flipperMagnitude = distance.pivotToBallSurface / flipper.length;

@@ -14,6 +14,10 @@ const playFieldSlopeOffsetY = PLAYFIELD.slopeSin * flipperOffsetZ;
 const playFieldSlipeOffsetZ = PLAYFIELD.slopeCos * flipperOffsetZ;
 const wedgeSlope = Math.atan(wedgeBaseHeight / flipperLengthFromPivot);
 const maxVelocity = 4;
+const FLIPPER_SWEEP_EXTRA_RADIUS = 0.03;
+const NEAR_FLIPPER_SUBSTEPS = 4;
+const FAST_BALL_SUBSTEPS = 6;
+const FAST_BALL_SPEED = 2.0;
 const shape = CannonWedge({ 
   widthX: flipperLengthFromPivot / 2, 
   heightY: flipperHeight / 2, 
@@ -142,17 +146,39 @@ export function WedgeFlipper ({
   function step () {
     if (flipperState.isAnimating === false) return; 
     const { position, previousPosition } = ballState.ref;
+    const previous = previousPosition || position;
   // BEGIN FRAME
     stepState.frame += stepState.direction;
   // UPDATE FLIPPER POSITION
     body.quaternion.copy(animation[stepState.frame]);
   // CHECK IF COLLISION FRAME
-    const flipperCollisionResults = flipperState.orientation === 'down' 
-      ? null 
-      : getContactFrame({
+    let flipperCollisionResults = null;
+    if (flipperState.orientation !== 'down') {
+      const prevDx = previous.x - axis[side].x;
+      const prevDz = previous.z - axis[side].z;
+      const currDx = position.x - axis[side].x;
+      const currDz = position.z - axis[side].z;
+      const prevDistance = Math.sqrt(prevDx ** 2 + prevDz ** 2);
+      const currentDistance = Math.sqrt(currDx ** 2 + currDz ** 2);
+      const nearDistance = flipperLengthFromPivot + ballState.radius + FLIPPER_SWEEP_EXTRA_RADIUS;
+      const isNearFlipper = Math.min(prevDistance, currentDistance) <= nearDistance;
+      const ballSpeed = ballState.ref.velocity.length();
+      const substeps = isNearFlipper
+        ? (ballSpeed > FAST_BALL_SPEED ? FAST_BALL_SUBSTEPS : NEAR_FLIPPER_SUBSTEPS)
+        : 1;
+
+      for (let i = 0; i < substeps; i++) {
+        const t = (i + 1) / substeps;
+        const interpolatedPosition = new CANNON.Vec3(
+          previous.x + (position.x - previous.x) * t,
+          previous.y + (position.y - previous.y) * t,
+          previous.z + (position.z - previous.z) * t
+        );
+
+        flipperCollisionResults = getContactFrame({
           ball: {
             radius: ballState.radius,
-            position
+            position: interpolatedPosition
           },
           flipper: {
             wedgeSlope,
@@ -165,7 +191,11 @@ export function WedgeFlipper ({
           side,
           hitArea: hitAreas[stepState.frame],
           maxVelocity
-      });
+        });
+
+        if (flipperCollisionResults !== null) break;
+      }
+    }
       
   // CHECK IF COLLISION FRAME
     if (flipperCollisionResults !== null) {
