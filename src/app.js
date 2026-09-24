@@ -1,12 +1,11 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 import InitThree from '@three/InitThree';
-import InitCannon from '@cannon/InitCannon';
+import InitPhysics from '@physics/InitPhysics';
 import InitMeshes from '@meshes/InitMeshes';
-import InitTriggers from '@cannon/triggers/InitTriggers';
-import CannonDebugger from 'cannon-es-debugger';
+import InitTriggers from '@physics/triggers/InitTriggers';
+import { PhysicsDebugRenderer } from '@debug/PhysicsDebugRenderer';
 import { DirectionControls } from './ui/DirectionControls';
-import { HEIGHT_ABOVE_FLOOR } from './App.config';
+import { HEIGHT_ABOVE_FLOOR, DEBUG } from './App.config';
 // webXR
 import {
   HitTestManager,
@@ -24,9 +23,7 @@ export const App = () => {
 
   const three = InitThree({ isDebugMode: false });
   const meshes = InitMeshes({ isDebugMode: false });
-  let cannon = {
-    world: new CANNON.World()
-  }
+  let physics = null;
   let triggers;
 
 
@@ -37,7 +34,7 @@ export const App = () => {
   const xrManager = XRManager({ startButton: ARButton(), onReady });
   let hitTestManager;
   let hitTestActive = true;
- 
+
   // UI
   const uiParent = document.createElement('div');
   uiParent.style.position = 'absolute';
@@ -58,46 +55,35 @@ export const App = () => {
 
 
   // ON SCREEN TAP
-  const onSelectCallback = (ev) => {
+  const onSelectCallback = async (ev) => {
     if (hitTestActive === false) return;
     if (meshes.reticle.visible) {
       const { x, y, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
-      console.log('y:',y)
-      meshes.reticle.visible = false;
-      animationUpdate = animationUpdate.filter(item => item.name === 'reticle');
+      animationUpdate = animationUpdate.filter(item => item.name !== 'reticle');
       hitTestActive = false;
-      meshes.reticle.visible = false; 
+      meshes.reticle.visible = false;
 
-      const cannonDebugger = new CannonDebugger(three.scene.self, cannon.world);
-      cannon = {
-        ...InitCannon({ world: cannon.world, placement: [x, y + HEIGHT_ABOVE_FLOOR, z] })
+      physics = await InitPhysics({ placement: [x, y + HEIGHT_ABOVE_FLOOR, z] });
+      triggers = InitTriggers({ physics });
+      if (DEBUG.showPhysics) {
+        const physicsDebug = PhysicsDebugRenderer({ scene: three.scene.self, world: physics.world });
+        animationUpdate.push({ name: 'physicsDebug', update: physicsDebug.update });
       }
-    
-      triggers = InitTriggers({ cannon, placement: [x,  y + HEIGHT_ABOVE_FLOOR, z] });
-      animationUpdate.push(
-        { name: 'cannonDebugger', update: () => cannonDebugger.update()},
-        { name: 'cannonLeftFlipper', update: () => cannon.leftFlipper.step()},
-        { name: 'cannonRightFlipper', update: () => cannon.rightFlipper.step()}
-      );
 
       directionControls = DirectionControls({
         uiParent,
-        leftFlipper: cannon.leftFlipper,
-        rightFlipper: cannon.rightFlipper
-      }) 
+        leftFlipper: physics.leftFlipper,
+        rightFlipper: physics.rightFlipper
+      })
       uiParent.style.visibility = 'visible';
       directionControls?.enableTouch();
 
-      setTimeout(cannon.ball.spawn, 1000);
-      setTimeout(cannon.shooterLane.onClose, 3000);
+      setTimeout(physics.ball.spawn, 1000);
+      setTimeout(physics.shooterLane.onClose, 3000);
     }
 }
 
 
-
-  let dt;
-  const timeStep = 1/60;
-  const maxSubSteps = 10;
 
   function animationLoopCallback(timestamp, frame) {
     let hitPoseTransformMatrix = [];
@@ -111,25 +97,11 @@ export const App = () => {
         meshes.reticle.visible = false;
       }
     }
-    dt = Math.min(clock.getDelta(), 0.1);
-    cannon.world.step(timeStep, dt, maxSubSteps);   
+    const dt = clock.getDelta();
+    physics?.update(dt);
     animationUpdate.forEach(item => item.update(dt));
     three.renderer.render(three.scene.self, three.camera.self);
   }
 
-
-
-
-
-  // // animation loop
-  // function animate() {
-  //   const dt = clock.getDelta();
-  //   cannon.world.step(dt); 
-  //   animationUpdate.forEach(item => item.update(dt));
-  //   three.renderer.render( three.scene.self, three.camera.self );
-  //   requestAnimationFrame( animate );
-  // }
- 
 }
-
 
