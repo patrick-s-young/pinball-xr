@@ -2,7 +2,8 @@ import KeyEvents from './KeyEvents';
 
 const InitKeyEvents = ({
   leftFlipper,
-  rightFlipper
+  rightFlipper,
+  plunger
 }) => {
   const keyEvents = new KeyEvents();
     
@@ -25,6 +26,16 @@ const InitKeyEvents = ({
     keyName: 'KeyL',
     keyAction: 'keyup',
     callBack: rightFlipper.onFlipperDown
+    });
+  keyEvents.addSubscriber({
+    keyName: 'Space',
+    keyAction: 'keydown',
+    callBack: plunger.pull
+    });
+  keyEvents.addSubscriber({
+    keyName: 'Space',
+    keyAction: 'keyup',
+    callBack: plunger.release
     });
 
   return {

@@ -73,13 +73,11 @@ export const App = () => {
       directionControls = DirectionControls({
         uiParent,
         leftFlipper: physics.leftFlipper,
-        rightFlipper: physics.rightFlipper
+        rightFlipper: physics.rightFlipper,
+        plunger: physics.plunger
       })
       uiParent.style.visibility = 'visible';
       directionControls?.enableTouch();
-
-      setTimeout(physics.ball.spawn, 1000);
-      setTimeout(physics.shooterLane.onClose, 3000);
     }
 }
 

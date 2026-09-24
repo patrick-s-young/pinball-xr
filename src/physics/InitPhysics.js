@@ -10,6 +10,7 @@ import {
   Flipper,
   LowerPlayfield,
   Playfield,
+  Plunger,
   ShooterLane } from '@physics/bodies';
 
 // Builds the Rapier world and table at the chosen placement. Shared by the WebXR and
@@ -28,24 +29,28 @@ const InitPhysics = async ({
   const context = { world, RAPIER, table, collisionEvents };
 
   const playfield = Playfield(context);
-  const shooterLane = ShooterLane(context);
   const ball = Ball(context);
+  const shooterLane = ShooterLane({ ...context, ball });
+  const plunger = Plunger({ ...context, ball, shooterLane });
   const bumpers = Bumper({ ...context, ball });
   const lowerPlayfield = LowerPlayfield({ ...context, ball });
   const leftFlipper = Flipper({ ...context, side: 'left' });
   const rightFlipper = Flipper({ ...context, side: 'right' });
 
-  shooterLane.onOpen();
+  // The first ball starts at rest against the plunger.
+  plunger.serveBall();
 
   const loop = FixedStepLoop({
     timeStep: PHYSICS.timeStep,
     maxFrameTime: PHYSICS.maxFrameTime,
     step: (dt) => {
       ball.beforeStep(dt);
+      plunger.update(dt);
       leftFlipper.update(dt);
       rightFlipper.update(dt);
       world.step(collisionEvents.eventQueue);
       collisionEvents.dispatch();
+      shooterLane.update();
     }
   });
 
@@ -53,6 +58,7 @@ const InitPhysics = async ({
     ...context,
     playfield,
     shooterLane,
+    plunger,
     bumpers,
     lowerPlayfield,
     ball,

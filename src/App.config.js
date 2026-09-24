@@ -8,8 +8,7 @@ export const SCALER = 0.0584;
 
 export const BALL = {
   mass: 0.08,
-  radius: 0.0146,
-  spawnVelocity: -4.7
+  radius: 0.0146
 }
 
 export const PLAYFIELD = {

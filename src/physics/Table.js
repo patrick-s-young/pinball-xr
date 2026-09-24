@@ -12,12 +12,17 @@ export const Table = ({ world, RAPIER, placement }) => {
       .setRotation(rotation)
   );
 
+  const inverseRotation = { x: -rotation.x, y: -rotation.y, z: -rotation.z, w: rotation.w };
+
   const directionToWorld = (local) => rotateVector(local, rotation);
 
   const toWorld = (local) => {
     const rotated = directionToWorld(local);
     return { x: rotated.x + x, y: rotated.y + y, z: rotated.z + z };
   }
+
+  const toLocal = (point) =>
+    rotateVector({ x: point.x - x, y: point.y - y, z: point.z - z }, inverseRotation);
 
   const rotationToWorld = (localRotation) => multiplyQuaternions(rotation, localRotation);
 
@@ -32,6 +37,7 @@ export const Table = ({ world, RAPIER, placement }) => {
     normal,
     heightAbovePlayfield,
     toWorld,
+    toLocal,
     directionToWorld,
     rotationToWorld
   }
