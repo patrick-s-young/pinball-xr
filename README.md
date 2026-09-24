@@ -1,5 +1,5 @@
 # pinball-xr
-## A three.js and cannon-es webxr pinball web app.
+## A three.js and Rapier webxr pinball web app.
 
 Real-world pinball differs from a video game in that the player is continuously moving their gaze over a physical playfield (like a spectator watching a tennis game).
 
@@ -7,24 +7,16 @@ Given the current strengths and weaknesses of mobile-based AR, standing in front
 
 ### Approach
 This project will be in three phases:
-1. A [cannon-es](https://github.com/pmndrs/cannon-es) wireframe that establishes the physics of gameplay.
+1. A [Rapier](https://rapier.rs/) wireframe that establishes the physics of gameplay.
 2. ARCore implementation. 
-3. A Three.js 'skin' on top of the cannon-es physics bodies (plus sound design).
+3. A Three.js 'skin' on top of the Rapier physics bodies (plus sound design).
 
 ### Tools
-I am initially developing in vanilla Javascript - along with [cannon-es](https://github.com/pmndrs/cannon-es) - with an eye on refactoring to incorporate [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and [zustand](https://github.com/pmndrs/zustand).
+I am initially developing in vanilla Javascript - along with [Rapier](https://rapier.rs/) - with an eye on refactoring to incorporate [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and [zustand](https://github.com/pmndrs/zustand).
 
 
 ### Progress
-I am establishing a baseline for the pinball game's physics behavior in WebXR. The videos below depict cannon-es in debugger mode. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
-
-WebXR mode 'yarn start'
-
-https://github.com/patrick-s-young/pinball-xr/assets/42591798/183ca26b-f026-4679-96cc-62b63bbda7bf
-
-Emulation mode 'yarn dev'
-
-https://github.com/patrick-s-young/pinball-xr/assets/42591798/b6b28d8c-4b32-42d3-8488-d6a1503cda5b
+I am establishing a baseline for the pinball game's physics behavior in WebXR. The physics now runs on Rapier (it was previously cannon-es), and the table is currently drawn as the Rapier debug wireframe until the visual and audio theming phase. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
 
 ## Application Architecture
 
@@ -33,7 +25,7 @@ The application has two entry points that share the same pinball table logic:
 - `yarn start` uses `src/index.js` and `src/app.js` for the WebXR flow.
 - `yarn dev` uses `src/index.dev.js` and `src/AppDev.js` for desktop emulation.
 
-Webpack selects the entry point from the `development` environment flag. Both entry points initialize Three.js rendering, temporary placement meshes, and a Cannon world. The difference is how the table placement is chosen: WebXR uses AR hit testing and a screen tap, while emulation uses a raycast from the pointer onto a debug floor.
+Webpack selects the entry point from the `development` environment flag. Both entry points initialize Three.js rendering and temporary placement meshes, then build the same Rapier physics world once a placement is chosen. The difference is how the table placement is chosen: WebXR uses AR hit testing and a screen tap, while emulation uses a raycast from the pointer onto a debug floor.
 
 ```mermaid
 flowchart TD
@@ -52,19 +44,19 @@ flowchart TD
     InitMeshesDev --> Raycast["Pointer raycast against debug floor"]
     Raycast --> Placement
 
-    Placement --> InitCannon["InitCannon: Cannon world bodies"]
-    InitCannon --> Bodies["Playfield, shooter lane, bumpers, ball, flippers"]
+    Placement --> InitPhysics["InitPhysics: Rapier world + table"]
+    InitPhysics --> Bodies["Playfield, shooter lane, bumpers, ball, flippers"]
     Bodies --> Triggers["InitTriggers: drain trigger + respawn flow"]
     Bodies --> Controls{"Controls"}
     Controls -->|"WebXR"| TouchControls["DirectionControls touch UI"]
     Controls -->|"Emulation"| KeyEvents["A/L keyboard events"]
 
-    InitCannon --> Loop["Animation loop"]
+    InitPhysics --> Loop["Animation loop"]
     Triggers --> Loop
     TouchControls --> Loop
     KeyEvents --> Loop
-    Loop --> Physics["world.step"]
-    Loop --> Updates["reticle/debugger/orbit/flipper updates"]
+    Loop --> Physics["physics.update: fixed 1/240 s steps"]
+    Loop --> Updates["reticle/physics debug/orbit updates"]
     Loop --> Render["renderer.render"]
 ```
 
@@ -72,20 +64,40 @@ flowchart TD
 
 1. `InitThree` creates the Three.js scene wrapper, camera, lights, renderer, and optional orbit controls for debug mode.
 2. `InitMeshes` creates placement helpers. WebXR uses the animated reticle with WebXR hit-test matrices; emulation uses the same reticle positioned by a pointer raycast against `DebugFloorMesh`.
-3. Once the user chooses a placement, `InitCannon` builds the physics table at that world position. It configures gravity and contact materials, then creates the playfield, shooter lane, bumpers, ball, left flipper, and right flipper.
-4. `InitTriggers` adds the drain trigger. When the ball collides with it, the shooter lane opens, the ball respawns, and the lane closes again after a delay.
+3. Once the user chooses a placement, `InitPhysics` loads Rapier and builds the table at that world position. All static colliders hang off one fixed table body tilted to the playfield slope; the ball is a dynamic body with continuous collision detection, and each flipper is a kinematic body.
+4. `InitTriggers` adds the drain sensor across the bottom of the table. When the ball enters it, the ball is disabled, the shooter lane opens, the ball respawns, and the lane closes again after a delay.
 5. Input is connected after the physics bodies exist. WebXR mode creates touch controls that call the flipper `onFlipperUp` and `onFlipperDown` handlers. Emulation mode binds the `A` and `L` keys to the same handlers.
-6. The animation loop advances the Cannon world, runs registered per-frame updates such as flipper animation and debug rendering, and then renders the Three.js scene.
+6. The animation loop calls `physics.update(dt)`, which advances the world in fixed 1/240 s steps (rotating the flippers and dispatching collision events each step), so behaviour is identical at 60 Hz on desktop and 72-120 Hz in a headset. It then runs per-frame updates such as debug rendering and renders the Three.js scene.
 
 ### Component Responsibilities
 
 - `src/three/` owns rendering setup: scene, camera, lights, WebGL renderer, and debug renderer.
 - `src/webXR/` owns AR session lifecycle and hit testing.
 - `src/meshes/` owns Three.js-only placement visuals, currently the reticle and debug floor.
-- `src/cannon/` owns gameplay physics, including bodies, shapes, materials, collision groups, and triggers.
-- `src/debug/` owns desktop-only debugging helpers such as keyboard input, the floor mesh, Cannon debugger wiring, and orbit controls.
+- `src/physics/` owns gameplay physics, including the fixed-step loop, table frame, bodies, shape helpers, materials, collision groups, and triggers. Tuning values live in `PHYSICS.config.js`, `MATERIALS.js`, and the `*.config.js` files beside each body.
+- `src/debug/` owns debugging helpers such as keyboard input, the floor mesh, the Rapier wireframe renderer, the FPS / physics-time overlay, and orbit controls.
 - `src/ui/` owns DOM controls used during the WebXR session.
-- `src/App.config.js` centralizes gameplay constants such as gravity, camera position, ball settings, playfield slope, and the table's height above the detected floor.
+- `src/App.config.js` centralizes gameplay constants such as gravity, camera position, ball settings, playfield slope, the table's height above the detected floor, and the `DEBUG.showPhysics` wireframe toggle.
+
+### Physics Model
+
+- **Fixed timestep.** The simulation always advances in 1/240 s steps, however fast the display refreshes. At 1/60 s a 4 m/s ball would move more than twice its own diameter per step.
+- **Table frame.** Layout is written in table space (x across, y up from the playfield, z toward the player). One fixed body carries the playfield slope, and every static collider is attached to it with local offsets.
+- **Primitive colliders.** Walls, floor, glass, and outlanes are boxes, and the curved orbit and gutters are built from box segments (`shapes/arcSegments.js`). Outer walls are thicker than the ball, and the floor has real thickness.
+- **Ball.** A dynamic sphere with continuous collision detection (CCD), so fast shots cannot tunnel through walls.
+- **Flippers.** Kinematic bodies rotated toward their up/down angle each physics step. Rapier derives the flipper's surface velocity from that motion, so the contact solver handles hits, cradles, and where along the flipper the ball is struck.
+- **Materials.** The ball uses coefficients of 1 with the `Min` combine rule, so each contact takes the friction and restitution of the surface it touches (`MATERIALS.js`).
+- **Events.** Only the ball enables collision events. Bumpers register a kick handler that sends the ball away from the bumper centre at `kickSpeed` or faster; the drain sensor spans the bottom of the table.
+
+Common tuning values:
+
+| Setting | File |
+|---|---|
+| Timestep, solver iterations, `lengthUnit` | `src/physics/PHYSICS.config.js` |
+| Friction and restitution per surface | `src/physics/MATERIALS.js` |
+| Flipper speeds, angles, and shape | `src/physics/bodies/Flipper.config.js` |
+| Bumper size, positions, and kick speed | `src/physics/bodies/Bumper.config.js` |
+| Ball mass, radius, and launch speed | `src/App.config.js` |
 
 
 ## Running Locally
@@ -99,16 +111,19 @@ yarn (to install)
 yarn start (for WebXR mode)
 yarn dev (for AR emulation mode)
 ```
+The equivalent `npm install`, `npm start`, and `npm run dev` commands also work.
+
+- Click the debug floor to place the table.
 - Left Flipper: A Key
-- Right Fipper: L Key
+- Right Flipper: L Key
 - Refresh browser for new ball (or let ball fall down drain).
+- In emulation mode, the overlay in the top-left shows FPS; click it to cycle to frame time, memory, and physics time per frame.
 
 ## Built With
 
-* [cannon-es](https://www.npmjs.com/package/cannon-es) - rigid body physics engine.
+* [Rapier](https://rapier.rs/) ([@dimforge/rapier3d-compat](https://www.npmjs.com/package/@dimforge/rapier3d-compat)) - rigid body physics engine (WASM).
 * [three.js](https://www.npmjs.com/package/three) - lightweight, cross-browser, general purpose 3D library.
-* [cannon-es-debugger](https://www.npmjs.com/package/cannon-es-debugger) - debugger for use with cannon-es.
-* [stats.js](https://www.npmjs.com/package/stats-js) - JavaScript performance monitor.
+* [stats.js](https://www.npmjs.com/package/stats.js) - FPS and physics-time overlay in emulation mode.
 * [webpack](https://webpack.js.org/) - static module builder.
 
 ## Authors

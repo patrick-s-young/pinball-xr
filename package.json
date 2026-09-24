@@ -13,8 +13,6 @@
   "author": "Patrick S. Young",
   "license": "MIT",
   "devDependencies": {
-    "cannon-es": "^0.19.0",
-    "cannon-es-debugger": "^1.0.0",
     "stats.js": "^0.17.0",
     "three": "^0.137.5",
     "webpack": "^5.38.1",
@@ -22,6 +20,7 @@
     "webpack-dev-server": "^4.7.4"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.20.0",
     "css-loader": "^6.9.0",
     "html-webpack-plugin": "^5.6.0",
     "style-loader": "^3.3.4"
