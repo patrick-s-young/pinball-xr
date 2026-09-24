@@ -8,6 +8,7 @@ import {
   Ball,
   Bumper,
   Flipper,
+  LowerPlayfield,
   Playfield,
   ShooterLane } from '@physics/bodies';
 
@@ -30,6 +31,7 @@ const InitPhysics = async ({
   const shooterLane = ShooterLane(context);
   const ball = Ball(context);
   const bumpers = Bumper({ ...context, ball });
+  const lowerPlayfield = LowerPlayfield({ ...context, ball });
   const leftFlipper = Flipper({ ...context, side: 'left' });
   const rightFlipper = Flipper({ ...context, side: 'right' });
 
@@ -39,6 +41,7 @@ const InitPhysics = async ({
     timeStep: PHYSICS.timeStep,
     maxFrameTime: PHYSICS.maxFrameTime,
     step: (dt) => {
+      ball.beforeStep(dt);
       leftFlipper.update(dt);
       rightFlipper.update(dt);
       world.step(collisionEvents.eventQueue);
@@ -51,6 +54,7 @@ const InitPhysics = async ({
     playfield,
     shooterLane,
     bumpers,
+    lowerPlayfield,
     ball,
     leftFlipper,
     rightFlipper,

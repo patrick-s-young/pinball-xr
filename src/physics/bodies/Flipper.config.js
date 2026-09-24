@@ -1,19 +1,31 @@
-import { SCALER } from '@src/App.config';
+import { PLAYFIELD, SCALER } from '@src/App.config';
+
+// Centre line of the lower playfield: halfway between the left wall and the shooter lane divider.
+export const LOWER_PLAYFIELD_CENTER_X =
+  (-5 * SCALER + (4.3 * SCALER - 0.01168 / 2)) / 2 + PLAYFIELD.offsetX;
 
 export const FLIPPER_CONFIG = {
-  length: 4 * SCALER,
-  height: 0.04672,
-  baseDepth: 0.0292,
-  // Tip depth as a fraction of baseDepth.
-  tipDepthRatio: 0.1,
-  // Table space pivot. The left flipper mirrors x.
-  pivot: { x: 4 * SCALER, z: 7 * SCALER },
-  // Rotation about the table's up axis. 0 points the flipper along +x.
-  angles: {
-    left: { down: -Math.PI / 6, up: Math.PI / 7 },
-    right: { down: Math.PI + Math.PI / 6, up: Math.PI - Math.PI / 7 }
-  },
-  // rad/s. 18 rad/s gives a tip speed of about 4.2 m/s, close to the previous 4 m/s maxVelocity.
-  upSpeed: 18,
-  downSpeed: 10
+  // A tapered bat between a pivot-end circle and a tip circle, about 3" (76 mm) long like a real flipper.
+  baseRadius: 0.012,
+  tipRadius: 0.0065,
+  // Pivot centre to tip centre.
+  length: 0.064,
+  height: 0.024,
+  // Effective mass of the bat, shaft and linkage that the ball has to push against.
+  mass: 0.2,
+  // Table space pivot, relative to LOWER_PLAYFIELD_CENTER_X. The left flipper mirrors x.
+  // This leaves a gap of about 50 mm between the resting tips.
+  pivot: { x: 0.087, z: 0.47 },
+  // Resting angle below horizontal, pointing toward the centre line.
+  restAngle: Math.PI / 6,
+  // Angle between the rest stop and the up stop.
+  swing: Math.PI / 6 + Math.PI / 7,
+  // Solenoid model, in N·m about the pivot. Full coil power drives the up stroke, then the
+  // end-of-stroke switch drops to hold power, which a hard shot can push down a little.
+  // The return spring acts at all times.
+  coilTorque: 0.52,
+  holdTorque: 0.12,
+  returnTorque: 0.05,
+  // Hold power takes over within this angle of the up stop.
+  endOfStrokeAngle: Math.PI / 36
 }

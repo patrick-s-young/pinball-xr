@@ -5,7 +5,12 @@ export const MATERIALS = {
   ball: { friction: 1, restitution: 1, combineRule: 'Min' },
   playfield: { friction: 0.1, restitution: 0.6 },
   bumper: { friction: 0.0, restitution: 0.5 },
-  flipper: { friction: 0.2, restitution: 0.7 }
+  // Flipper rubber grips the ball so players can aim, and is fairly soft.
+  flipper: { friction: 0.6, restitution: 0.55 },
+  // Rubber rings on slingshots and posts.
+  rubber: { friction: 0.3, restitution: 0.8 },
+  // Metal or plastic lane guides.
+  guide: { friction: 0.1, restitution: 0.4 }
 }
 
 export const withMaterial = (RAPIER, colliderDesc, { friction, restitution, combineRule }) => {

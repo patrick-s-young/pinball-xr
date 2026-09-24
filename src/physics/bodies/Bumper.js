@@ -2,6 +2,7 @@ import { BUMPER_CONFIG } from './Bumper.config';
 import { COLLISION_GROUPS } from '@physics/COLLISION_GROUPS';
 import { MATERIALS, withMaterial } from '@physics/MATERIALS';
 import { dot, normalize } from '@math';
+import { kickBall } from '@physics/kickBall';
 
 export const Bumper = ({ world, RAPIER, table, collisionEvents, ball }) => {
   const { radius, height, kickSpeed, locations } = BUMPER_CONFIG;
@@ -33,15 +34,7 @@ export const Bumper = ({ world, RAPIER, table, collisionEvents, ball }) => {
       y: offset.y - table.normal.y * normalOffset,
       z: offset.z - table.normal.z * normalOffset
     });
-    const velocity = ball.body.linvel();
-    const outwardSpeed = dot(velocity, direction);
-    if (outwardSpeed >= kickSpeed) return;
-    const boost = kickSpeed - outwardSpeed;
-    ball.body.setLinvel({
-      x: velocity.x + direction.x * boost,
-      y: velocity.y + direction.y * boost,
-      z: velocity.z + direction.z * boost
-    }, true);
+    kickBall(ball, direction, kickSpeed);
   }
 
   return bumpers;
