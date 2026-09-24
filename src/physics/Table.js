@@ -21,9 +21,16 @@ export const Table = ({ world, RAPIER, placement }) => {
 
   const rotationToWorld = (localRotation) => multiplyQuaternions(rotation, localRotation);
 
+  const normal = directionToWorld({ x: 0, y: 1, z: 0 });
+
+  // Distance of a world point above the playfield surface.
+  const heightAbovePlayfield = (point) =>
+    (point.x - x) * normal.x + (point.y - y) * normal.y + (point.z - z) * normal.z;
+
   return {
     body,
-    normal: directionToWorld({ x: 0, y: 1, z: 0 }),
+    normal,
+    heightAbovePlayfield,
     toWorld,
     directionToWorld,
     rotationToWorld
