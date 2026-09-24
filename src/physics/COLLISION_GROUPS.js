@@ -13,5 +13,7 @@ export const COLLISION_GROUPS = {
   ball: interactionGroups(GROUP.BALL, GROUP.TABLE | GROUP.FLIPPER | GROUP.TRIGGER),
   table: interactionGroups(GROUP.TABLE, GROUP.BALL),
   flipper: interactionGroups(GROUP.FLIPPER, GROUP.BALL),
-  trigger: interactionGroups(GROUP.TRIGGER, GROUP.BALL)
+  trigger: interactionGroups(GROUP.TRIGGER, GROUP.BALL),
+  // Drawn by the debug renderer but collides with nothing.
+  visualOnly: interactionGroups(0, 0)
 }

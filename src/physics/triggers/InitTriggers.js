@@ -9,9 +9,7 @@ const InitTriggers = ({ physics }) => {
   });
   PXREvent.addEventListener('DRAIN_EVENT', () => {
     physics.ball.disable();
-    physics.shooterLane.onOpen();
-    setTimeout(physics.ball.spawn, 1000);
-    setTimeout(physics.shooterLane.onClose, 4000);
+    setTimeout(physics.plunger.serveBall, 1000);
   });
 
   return {

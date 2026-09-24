@@ -76,15 +76,13 @@ const onClick = async () => {
   triggers = InitTriggers({ physics });
   keyEvents = InitKeyEvents({
     leftFlipper: physics.leftFlipper,
-    rightFlipper: physics.rightFlipper
+    rightFlipper: physics.rightFlipper,
+    plunger: physics.plunger
   });
   if (DEBUG.showPhysics) {
     const physicsDebug = PhysicsDebugRenderer({ scene: three.scene.self, world: physics.world });
     animationUpdate.push({ name: 'physicsDebug', update: physicsDebug.update });
   }
-    // start
-    setTimeout(physics.ball.spawn, 1000);
-    setTimeout(physics.shooterLane.onClose, 3000);
 }
 
 initDebug();

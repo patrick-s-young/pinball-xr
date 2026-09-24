@@ -9,7 +9,6 @@ const ON_PLAYFIELD_TOLERANCE = 0.001;
 export const Ball = ({ world, RAPIER, table }) => {
   const { mass, radius, rollingResistance } = BALL_CONFIG;
   const spawnPoint = table.toWorld(BALL_CONFIG.spawnPosition);
-  const launchVelocity = table.directionToWorld(BALL_CONFIG.launchVelocity);
   const rollingDeceleration = rollingResistance * Math.abs(WORLD.gravity.y) * Math.abs(table.normal.y);
 
   const body = world.createRigidBody(
@@ -42,14 +41,15 @@ export const Ball = ({ world, RAPIER, table }) => {
     body.setAngvel({ x: spin.x * scale, y: spin.y * scale, z: spin.z * scale }, true);
   }
 
-  const spawn = () => {
+  // Places the ball at rest at the bottom of the shooter lane, against the plunger.
+  const serve = () => {
     body.setEnabled(true);
     body.setTranslation(spawnPoint, true);
     body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    body.setLinvel(launchVelocity, true);
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
   }
 
-  // Removes the ball from the simulation until the next spawn.
+  // Removes the ball from the simulation until the next serve.
   const disable = () => body.setEnabled(false);
 
   return {
@@ -59,7 +59,8 @@ export const Ball = ({ world, RAPIER, table }) => {
     beforeStep,
     // The ball's velocity at the start of the current step, before any collision response.
     getVelocityBeforeStep: () => velocityBeforeStep,
-    spawn,
+    spawnPoint,
+    serve,
     disable
   }
 }

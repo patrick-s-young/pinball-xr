@@ -4,7 +4,8 @@ import './styles.css';
 export const DirectionControls = ({ 
   uiParent,
   leftFlipper,
-  rightFlipper }) => {
+  rightFlipper,
+  plunger }) => {
   const flipperActions = {
     LEFT: {
       up: () => leftFlipper.onFlipperUp(),
@@ -13,6 +14,10 @@ export const DirectionControls = ({
     RIGHT: {
       up: () => rightFlipper.onFlipperUp(),
       down: () => rightFlipper.onFlipperDown()
+    },
+    PLUNGER: {
+      up: () => plunger.pull(),
+      down: () => plunger.release()
     }
   }
 // Button container
@@ -27,9 +32,15 @@ export const DirectionControls = ({
   rightFlipperButton.className = 'flipperButton';
   rightFlipperButton.id = 'RIGHT'
   rightFlipperButton.onpointerdown = (ev) => onTouchStart(ev)
+  const plungerButton = document.createElement('div');
+  plungerButton.className = 'plungerButton';
+  plungerButton.id = 'PLUNGER'
+  plungerButton.onpointerdown = (ev) => onTouchStart(ev)
   buttonContainer.appendChild(leftFlipperButton);
+  buttonContainer.appendChild(plungerButton);
   buttonContainer.appendChild(rightFlipperButton)
   preventLongPressMenu(leftFlipperButton);
+  preventLongPressMenu(plungerButton);
   preventLongPressMenu(rightFlipperButton);
 
 
@@ -37,13 +48,13 @@ export const DirectionControls = ({
 
   const onTouchStart = (ev) => {
     const { id:flipperName } = ev.target;
-    if (['RIGHT', 'LEFT'].includes(flipperName) === false) return;
+    if (['RIGHT', 'LEFT', 'PLUNGER'].includes(flipperName) === false) return;
     flipperActions[flipperName].up();
   }
 
   const onTouchEnd = (ev) => {
     const { id:flipperName } = ev.target;
-    if (['RIGHT', 'LEFT'].includes(flipperName) === false) return;
+    if (['RIGHT', 'LEFT', 'PLUNGER'].includes(flipperName) === false) return;
     flipperActions[flipperName].down();
   }
 
