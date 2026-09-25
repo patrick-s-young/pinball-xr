@@ -40,7 +40,7 @@ const batPoints = (side) => {
 // Each physics step applies solenoid-style torque: full coil power on the up stroke, hold power
 // near the up stop, and a return spring. Because the flipper has real mass and finite torque,
 // the ball can push it back, which is what makes catches and dead-flipper bounces possible.
-export const Flipper = ({ world, RAPIER, table, side }) => {
+export const Flipper = ({ world, RAPIER, table, power, side }) => {
   const {
     height,
     mass,
@@ -90,7 +90,8 @@ export const Flipper = ({ world, RAPIER, table, side }) => {
 
   // Called once per physics step, before world.step.
   const update = (dt) => {
-    const coil = isEnergized
+    // A tilted machine cuts flipper power; the return spring still acts.
+    const coil = isEnergized && power.isOn
       ? (getStroke() >= swing - endOfStrokeAngle ? holdTorque : coilTorque)
       : 0;
     const impulse = (coil - returnTorque) * upSign * dt;

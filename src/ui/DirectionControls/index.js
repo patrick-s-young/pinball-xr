@@ -5,7 +5,8 @@ export const DirectionControls = ({
   uiParent,
   leftFlipper,
   rightFlipper,
-  plunger }) => {
+  plunger,
+  nudge }) => {
   const flipperActions = {
     LEFT: {
       up: () => leftFlipper.onFlipperUp(),
@@ -43,6 +44,19 @@ export const DirectionControls = ({
   preventLongPressMenu(plungerButton);
   preventLongPressMenu(rightFlipperButton);
 
+
+// Nudge buttons across the top: shove the cabinet from the left, the front, or the right.
+  const nudgeContainer = document.createElement('div');
+  nudgeContainer.className = 'nudgeContainer';
+  uiParent.appendChild(nudgeContainer);
+  [['left', 'NUDGE L'], ['front', 'NUDGE'], ['right', 'NUDGE R']].forEach(([side, label]) => {
+    const nudgeButton = document.createElement('div');
+    nudgeButton.className = 'nudgeButton';
+    nudgeButton.textContent = label;
+    nudgeButton.onpointerdown = () => nudge.nudge(side);
+    preventLongPressMenu(nudgeButton);
+    nudgeContainer.appendChild(nudgeButton);
+  });
 
   const enableTouch = () => buttonContainer.addEventListener('touchend', onTouchEnd);
 

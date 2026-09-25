@@ -1,0 +1,14 @@
+.statusMessage {
+  position: absolute;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  font: bold 24px sans-serif;
+  color: white;
+  background-color: rgba(200, 0, 0, 0.85);
+  border-radius: 6px;
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 10;
+}

@@ -6,6 +6,7 @@ import InitKeyEvents from '@debug/InitKeyEvents';
 import InitMeshes from '@meshes/InitMeshes';
 import { PhysicsDebugRenderer } from '@debug/PhysicsDebugRenderer';
 import { PerformanceStats } from '@debug/PerformanceStats';
+import { StatusMessage, showTiltStatus } from '@ui/StatusMessage';
 import { HEIGHT_ABOVE_FLOOR, DEBUG } from './App.config';
 
 const isDebugMode = true;
@@ -77,8 +78,10 @@ const onClick = async () => {
   keyEvents = InitKeyEvents({
     leftFlipper: physics.leftFlipper,
     rightFlipper: physics.rightFlipper,
-    plunger: physics.plunger
+    plunger: physics.plunger,
+    nudge: physics.nudge
   });
+  showTiltStatus(StatusMessage(), physics.nudge);
   if (DEBUG.showPhysics) {
     const physicsDebug = PhysicsDebugRenderer({ scene: three.scene.self, world: physics.world });
     animationUpdate.push({ name: 'physicsDebug', update: physicsDebug.update });

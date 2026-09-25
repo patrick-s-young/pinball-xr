@@ -5,6 +5,7 @@ import InitMeshes from '@meshes/InitMeshes';
 import InitTriggers from '@physics/triggers/InitTriggers';
 import { PhysicsDebugRenderer } from '@debug/PhysicsDebugRenderer';
 import { DirectionControls } from './ui/DirectionControls';
+import { StatusMessage, showTiltStatus } from '@ui/StatusMessage';
 import { HEIGHT_ABOVE_FLOOR, DEBUG } from './App.config';
 // webXR
 import {
@@ -74,8 +75,10 @@ export const App = () => {
         uiParent,
         leftFlipper: physics.leftFlipper,
         rightFlipper: physics.rightFlipper,
-        plunger: physics.plunger
+        plunger: physics.plunger,
+        nudge: physics.nudge
       })
+      showTiltStatus(StatusMessage(), physics.nudge);
       uiParent.style.visibility = 'visible';
       directionControls?.enableTouch();
     }

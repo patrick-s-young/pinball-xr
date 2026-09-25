@@ -21,3 +21,23 @@
   border-radius: 50%;
   background-color: orange;
 }
+
+.nudgeContainer {
+  position: absolute;
+  top: 15vh;
+  display: flex;
+  justify-content: space-between;
+  width: 100vw;
+}
+
+.nudgeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22vw;
+  height: 10vw;
+  border-radius: 8px;
+  font: bold 14px sans-serif;
+  color: white;
+  background-color: rgba(0, 0, 160, 0.6);
+}

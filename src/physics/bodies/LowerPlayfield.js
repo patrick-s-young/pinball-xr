@@ -7,7 +7,7 @@ import { dot } from '@math';
 
 // Inlane/outlane dividers and their top posts, outlane deflectors, and slingshots, on both sides.
 export const LowerPlayfield = (physics) => {
-  const { world, RAPIER, table, collisionEvents, ball } = physics;
+  const { world, RAPIER, table, collisionEvents, power, ball } = physics;
   const {
     wallHeight,
     guideThickness,
@@ -46,6 +46,7 @@ export const LowerPlayfield = (physics) => {
     const faceNormal = table.directionToWorld(normal);
 
     collisionEvents.onCollisionStart(kicker, () => {
+      if (power.isOn === false) return;
       const approachSpeed = -dot(ball.getVelocityBeforeStep(), faceNormal);
       if (approachSpeed < minTriggerSpeed) return;
       const angle = (Math.random() * 2 - 1) * angleVariation;

@@ -35,9 +35,9 @@ KeyEvents.prototype.onKeyDown = function ({ code:keyName }) {
 }
 
 KeyEvents.prototype.onKeyUp = function ({ code:keyName }) {
+  this.keyState[keyName] = 'keyup';
   if (this.subscribers.keyup[keyName] === undefined) return;
   this.subscribers.keyup[keyName].forEach(callBack => callBack());
-  this.keyState[keyName] = 'keyup';
 }
 
 export default KeyEvents;

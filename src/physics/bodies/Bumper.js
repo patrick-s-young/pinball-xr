@@ -4,7 +4,7 @@ import { MATERIALS, withMaterial } from '@physics/MATERIALS';
 import { dot, normalize } from '@math';
 import { kickBall } from '@physics/kickBall';
 
-export const Bumper = ({ world, RAPIER, table, collisionEvents, ball }) => {
+export const Bumper = ({ world, RAPIER, table, collisionEvents, power, ball }) => {
   const { radius, height, kickSpeed, locations } = BUMPER_CONFIG;
   const bumpers = {};
 
@@ -15,7 +15,7 @@ export const Bumper = ({ world, RAPIER, table, collisionEvents, ball }) => {
     const collider = world.createCollider(withMaterial(RAPIER, colliderDesc, MATERIALS.bumper), table.body);
     const worldCenter = table.toWorld(center);
 
-    collisionEvents.onCollisionStart(collider, () => kick(worldCenter));
+    collisionEvents.onCollisionStart(collider, () => { if (power.isOn) kick(worldCenter); });
     bumpers[bumperName] = collider;
   });
 
