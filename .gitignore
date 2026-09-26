@@ -1,1 +1,6 @@
 node_modules
+# Visual Pinball source tables are kept out of git for now
+tables/*.vpx
+
+# Physics test bundle
+test/physics/.build/

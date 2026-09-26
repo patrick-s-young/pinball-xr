@@ -1,107 +1,68 @@
 import * as THREE from 'three';
 import InitThree from '@three/InitThree';
-import InitPhysics from '@physics/InitPhysics';
-import InitTriggers from '@physics/triggers/InitTriggers';
-import InitKeyEvents from '@debug/InitKeyEvents';
 import InitMeshes from '@meshes/InitMeshes';
-import { PhysicsDebugRenderer } from '@debug/PhysicsDebugRenderer';
 import { PerformanceStats } from '@debug/PerformanceStats';
-import { StatusMessage, showTiltStatus } from '@ui/StatusMessage';
-import { HEIGHT_ABOVE_FLOOR, DEBUG } from './App.config';
+import { createGame } from './game/Game';
+import { Keyboard } from './input/Keyboard';
+import { Gamepads } from './input/Gamepads';
+import { HEIGHT_ABOVE_FLOOR, DEFAULT_TABLE } from './App.config';
+import { selectTable } from './tables';
 
-const isDebugMode = true;
-
-//////////////////
-// BEGIN COMPONENT
+// Desktop emulation: click the floor to place the table, then play with the keyboard or a
+// gamepad.
 export const AppDev = () => {
-  let animationUpdate = [];
   const clock = new THREE.Clock();
   const stats = PerformanceStats();
+  const three = InitThree({ isDebugMode: true });
+  const meshes = InitMeshes({ isDebugMode: true });
+  const canvas = three.renderer.domElement;
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let game = null;
+  let gamepads = null;
 
-  const three = InitThree({ isDebugMode });
-  const meshes = InitMeshes({ isDebugMode });
-  let physics = null;
-  let triggers;
-  let keyEvents;
-
-  three.scene.add([
-    meshes.reticle.mesh
-  ]);
-
-
-
-  if (isDebugMode) {
-    animationUpdate.push(
-      { name: 'orbitControls', update: () => three.orbitControls.update()}
-    );
-    three.scene.add([
-      meshes.debugFloor.mesh,
-    ]);
-  }
-
-
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
-
-const hitTest = {
-  raycaster: new THREE.Raycaster(),
-  pointer: new THREE.Vector2()
-}
-
-function initDebug () {
+  three.scene.add([meshes.reticle.mesh, meshes.debugFloor.mesh]);
   meshes.reticle.visible = true;
-  animationUpdate.push(
-    { name: 'reticle', update: (dt) => meshes.reticle.updateMixer(dt)}
-  );
-  three.renderer.domElement.addEventListener('pointermove', onPointerMove);
-  three.renderer.domElement.addEventListener('click', onClick);
-}
 
-function onPointerMove(event) {
-  hitTest.pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  hitTest.pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-  hitTest.raycaster.setFromCamera( hitTest.pointer, three.camera.self );
-  const intersects = hitTest.raycaster.intersectObject(meshes.debugFloor.mesh);
-  if (intersects.length > 0) meshes.reticle.setPosition(intersects[0].point);
-}
-
-const onClick = async () => {
-  three.renderer.domElement.removeEventListener('pointermove', onPointerMove);
-  three.renderer.domElement.removeEventListener('click', onClick);
-  // reticle
-  const { x, y, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
-  meshes.reticle.visible = false;
-  animationUpdate = animationUpdate.filter(item => item.name !== 'reticle');
-
-  physics = await InitPhysics({ placement: [x, HEIGHT_ABOVE_FLOOR, z] });
-  triggers = InitTriggers({ physics });
-  keyEvents = InitKeyEvents({
-    leftFlipper: physics.leftFlipper,
-    rightFlipper: physics.rightFlipper,
-    plunger: physics.plunger,
-    nudge: physics.nudge
-  });
-  showTiltStatus(StatusMessage(), physics.nudge);
-  if (DEBUG.showPhysics) {
-    const physicsDebug = PhysicsDebugRenderer({ scene: three.scene.self, world: physics.world });
-    animationUpdate.push({ name: 'physicsDebug', update: physicsDebug.update });
+  const onPointerMove = (event) => {
+    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointer, three.camera.self);
+    const [hit] = raycaster.intersectObject(meshes.debugFloor.mesh);
+    if (hit) meshes.reticle.setPosition(hit.point);
   }
-}
 
-initDebug();
-//------------------------------------------------------------------------
-//------------------------------------------------------------------------
+  const onClick = async () => {
+    canvas.removeEventListener('pointermove', onPointerMove);
+    canvas.removeEventListener('click', onClick);
+    const { x, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
+    meshes.reticle.visible = false;
+    game = await createGame({
+      definition: selectTable(DEFAULT_TABLE),
+      placement: [x, HEIGHT_ABOVE_FLOOR, z],
+      scene: three.scene.self
+    });
+    Keyboard(game.controls);
+    gamepads = Gamepads(game.controls);
+  }
 
-  // animation loop
-  function animate() {
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('click', onClick);
+
+  const animate = () => {
     stats.begin();
     const dt = clock.getDelta();
-    if (physics !== null) stats.measurePhysics(() => physics.update(dt));
-    animationUpdate.forEach(item => item.update(dt));
-    three.renderer.render( three.scene.self, three.camera.self );
+    if (game) {
+      gamepads.poll();
+      stats.measurePhysics(() => game.physicsUpdate(dt));
+      game.viewUpdate();
+    } else {
+      meshes.reticle.updateMixer(dt);
+    }
+    three.orbitControls.update();
+    three.renderer.render(three.scene.self, three.camera.self);
     stats.end();
-    requestAnimationFrame( animate );
+    requestAnimationFrame(animate);
   }
   animate();
 }
-
