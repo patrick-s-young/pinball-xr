@@ -49,7 +49,7 @@ flowchart TD
     Bodies --> Triggers["InitTriggers: drain trigger + serve next ball"]
     Bodies --> Controls{"Controls"}
     Controls -->|"WebXR"| TouchControls["DirectionControls touch UI"]
-    Controls -->|"Emulation"| KeyEvents["A/L/Space keyboard events"]
+    Controls -->|"Emulation"| KeyEvents["A/L/Space/Z/./B keyboard events"]
 
     InitPhysics --> Loop["Animation loop"]
     Triggers --> Loop
@@ -65,8 +65,8 @@ flowchart TD
 1. `InitThree` creates the Three.js scene wrapper, camera, lights, renderer, and optional orbit controls for debug mode.
 2. `InitMeshes` creates placement helpers. WebXR uses the animated reticle with WebXR hit-test matrices; emulation uses the same reticle positioned by a pointer raycast against `DebugFloorMesh`.
 3. Once the user chooses a placement, `InitPhysics` loads Rapier and builds the table at that world position. All static colliders hang off one fixed table body tilted to the playfield slope; the ball is a dynamic body with continuous collision detection, and each flipper is a dynamic body on a revolute joint.
-4. `InitTriggers` adds the drain sensor across the bottom of the table. When the ball enters it, the ball is disabled and, a second later, the plunger serves a new ball: the lane gate opens and the ball waits at rest against the plunger.
-5. Input is connected after the physics bodies exist. WebXR mode creates touch controls that call the flipper `onFlipperUp` and `onFlipperDown` handlers and the plunger `pull` and `release` handlers. Emulation mode binds the `A` and `L` keys to the flippers and `Space` to the plunger.
+4. `InitTriggers` adds the drain sensor across the bottom of the table. When the ball enters it, the ball is disabled and, a second later, any tilt is cleared and the plunger serves a new ball: the lane gate opens and the ball waits at rest against the plunger.
+5. Input is connected after the physics bodies exist. WebXR mode creates touch controls that call the flipper `onFlipperUp` and `onFlipperDown` handlers, the plunger `pull` and `release` handlers, and `nudge`. Emulation mode binds the `A` and `L` keys to the flippers, `Space` to the plunger, and `Z`, `.`, and `B` to nudges. A status message shows tilt warnings and tilts in both modes.
 6. The animation loop calls `physics.update(dt)`, which advances the world in fixed 1/240 s steps (applying rolling resistance and flipper coil torque, then dispatching collision events each step), so behaviour is identical at 60 Hz on desktop and 72-120 Hz in a headset. It then runs per-frame updates such as debug rendering and renders the Three.js scene.
 
 ### Component Responsibilities
@@ -76,19 +76,21 @@ flowchart TD
 - `src/meshes/` owns Three.js-only placement visuals, currently the reticle and debug floor.
 - `src/physics/` owns gameplay physics, including the fixed-step loop, table frame, bodies, shape helpers, materials, collision groups, and triggers. Tuning values live in `PHYSICS.config.js`, `MATERIALS.js`, and the `*.config.js` files beside each body.
 - `src/debug/` owns debugging helpers such as keyboard input, the floor mesh, the Rapier wireframe renderer, the FPS / physics-time overlay, and orbit controls.
-- `src/ui/` owns DOM controls used during the WebXR session.
+- `src/ui/` owns DOM controls used during the WebXR session, and the status message for tilt warnings.
 - `src/App.config.js` centralizes gameplay constants such as gravity, camera position, ball settings, playfield slope, the table's height above the detected floor, and the `DEBUG.showPhysics` wireframe toggle.
 
 ### Physics Model
 
 - **Fixed timestep.** The simulation always advances in 1/240 s steps, however fast the display refreshes. At 1/60 s a 4 m/s ball would move more than twice its own diameter per step.
-- **Table frame.** Layout is written in table space (x across, y up from the playfield, z toward the player). One fixed body carries the playfield slope, and every static collider is attached to it with local offsets.
+- **Table frame.** Layout is written in table space (x across, y up from the playfield, z toward the player). One body carries the playfield slope, and every static collider is attached to it with local offsets. It is kinematic so a nudge can move the whole cabinet.
 - **Primitive colliders.** Walls, floor, and glass are boxes. The curved orbit is built from box segments (`shapes/arcSegments.js`), and lane guides and slingshots from straight segments along a path (`shapes/polylineSegments.js`). Outer walls are thicker than the ball, and the floor has real thickness.
 - **Ball.** A dynamic sphere with continuous collision detection (CCD), so fast shots cannot tunnel through walls. Rolling resistance slows it slightly while it is on the playfield, which Rapier does not model on its own; without it a cradled ball rocks indefinitely.
 - **Flippers.** About 3" (76 mm) long, like a real flipper. Each is a dynamic body on a revolute joint whose limits are the rest and up stops, driven by a solenoid model each physics step: full coil torque on the up stroke, weaker hold torque near the up stop (like a real end-of-stroke switch), and a return spring. Because the flipper has mass and finite torque, a hard shot can push a raised flipper back, and the ball slows the flipper as it is struck.
 - **Materials.** The ball uses coefficients of 1 with the `Min` combine rule, so each contact takes the friction and restitution of the surface it touches (`MATERIALS.js`).
 - **Lower playfield.** Inlane/outlane dividers end flush with each flipper's top face so the inlane feeds the ball onto the flipper, and outlanes run down the side walls to the drain. Rubber deflectors on the side walls stop a ball running down a wall, such as the plunge coming off the orbit, from dropping straight into an outlane. The layout is derived from the flipper geometry (`LowerPlayfield.config.js`), so moving or resizing the flippers keeps the guides flush.
 - **Plunger and lane gate.** A served ball waits at rest at the bottom of the shooter lane. Holding the plunger builds pull over one second, and releasing launches the ball up the lane at 0.5-5.5 m/s depending on the pull; it only fires when the ball is resting at the plunger. A weak shot rolls back for another try. A one-way gate at the top of the lane closes once the ball is fully through; it is angled so a ball that lands on it rolls off onto the playfield. The plunger rod shown in the wireframe is visual only.
+- **Nudge.** A nudge shoves the whole cabinet 15 mm and lets it spring back over 0.1 s; the flippers move with it. As on a real table, the ball is affected only through contact: a nudge knocks a ball off a wall, post, or flipper it is touching, and does almost nothing to a ball rolling freely.
+- **Tilt.** A plumb-bob model. Each nudge adds to the bob's swing, which dies away over time, and while the swing is high the bob strikes the tilt ring once per half swing. Two quick nudges give a warning, the first two strikes are warnings, and the third tilts the machine: flippers, slingshots, and bumpers lose power until the ball drains. The plunger still works, and the next ball starts with the tilt cleared.
 - **Events.** Only the ball enables collision events. Bumpers and slingshots register kick handlers that send the ball away at a minimum speed. Slingshots fire only when the ball moves into the face above a threshold speed, and each kick varies slightly, as on a real table, so the ball cannot settle into an endless bounce loop. The drain sensor spans the bottom of the table.
 
 Common tuning values:
@@ -104,6 +106,7 @@ Common tuning values:
 | Rolling resistance | `src/physics/bodies/Ball.config.js` |
 | Plunger launch speed range, pull time, and ready check | `src/physics/bodies/Plunger.config.js` |
 | Shooter lane walls and gate | `src/physics/bodies/ShooterLane.config.js` |
+| Nudge distance and duration, tilt sensitivity and warnings | `src/physics/Nudge.config.js` |
 
 
 ## Running Locally
@@ -123,6 +126,7 @@ The equivalent `npm install`, `npm start`, and `npm run dev` commands also work.
 - Left Flipper: A Key
 - Right Flipper: L Key
 - Plunger: hold Space to pull back, release to launch. The longer you hold (up to one second), the harder the shot. In WebXR mode, use the orange button between the flipper buttons.
+- Nudge: `Z` shoves the cabinet from the left, `.` from the right, and `B` from the front. In WebXR mode, use the NUDGE L / NUDGE / NUDGE R buttons. Nudge too much and you get tilt warnings, then TILT.
 - A new ball is served to the plunger a second after each drain (or refresh the browser).
 - In emulation mode, the overlay in the top-left shows FPS; click it to cycle to frame time, memory, and physics time per frame.
 

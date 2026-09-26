@@ -4,6 +4,7 @@ import { initRapier } from './initRapier';
 import { FixedStepLoop } from './FixedStepLoop';
 import { CollisionEvents } from './CollisionEvents';
 import { Table } from './Table';
+import { Nudge } from './Nudge';
 import {
   Ball,
   Bumper,
@@ -26,7 +27,9 @@ const InitPhysics = async ({
 
   const collisionEvents = CollisionEvents({ RAPIER });
   const table = Table({ world, RAPIER, placement });
-  const context = { world, RAPIER, table, collisionEvents };
+  // Playfield power for flippers, slingshots, and bumpers. A tilt switches it off.
+  const power = { isOn: true };
+  const context = { world, RAPIER, table, collisionEvents, power };
 
   const playfield = Playfield(context);
   const ball = Ball(context);
@@ -36,6 +39,7 @@ const InitPhysics = async ({
   const lowerPlayfield = LowerPlayfield({ ...context, ball });
   const leftFlipper = Flipper({ ...context, side: 'left' });
   const rightFlipper = Flipper({ ...context, side: 'right' });
+  const nudge = Nudge({ table, power });
 
   // The first ball starts at rest against the plunger.
   plunger.serveBall();
@@ -44,6 +48,7 @@ const InitPhysics = async ({
     timeStep: PHYSICS.timeStep,
     maxFrameTime: PHYSICS.maxFrameTime,
     step: (dt) => {
+      nudge.update(dt);
       ball.beforeStep(dt);
       plunger.update(dt);
       leftFlipper.update(dt);
@@ -59,6 +64,7 @@ const InitPhysics = async ({
     playfield,
     shooterLane,
     plunger,
+    nudge,
     bumpers,
     lowerPlayfield,
     ball,

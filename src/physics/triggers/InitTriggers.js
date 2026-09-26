@@ -9,7 +9,11 @@ const InitTriggers = ({ physics }) => {
   });
   PXREvent.addEventListener('DRAIN_EVENT', () => {
     physics.ball.disable();
-    setTimeout(physics.plunger.serveBall, 1000);
+    setTimeout(() => {
+      // Each new ball starts with the tilt cleared and playfield power restored.
+      physics.nudge.resetTilt();
+      physics.plunger.serveBall();
+    }, 1000);
   });
 
   return {

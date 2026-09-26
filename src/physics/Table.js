@@ -2,12 +2,14 @@ import { PLAYFIELD } from '@src/App.config';
 import { multiplyQuaternions, rotateVector } from '@math';
 
 // The tilted table frame: x across the table, y up from the playfield surface, z toward the player.
-// Every static table collider hangs off this one fixed body; moving parts use toWorld helpers.
+// Every static table collider hangs off this one body; moving parts use the toWorld helpers,
+// which describe the table at its rest position. The body is kinematic so a nudge can shove the
+// whole cabinet a few millimetres and let it spring back.
 export const Table = ({ world, RAPIER, placement }) => {
   const [x, y, z] = placement;
   const rotation = PLAYFIELD.slopeQuaternion;
   const body = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed()
+    RAPIER.RigidBodyDesc.kinematicPositionBased()
       .setTranslation(x, y, z)
       .setRotation(rotation)
   );
@@ -28,6 +30,12 @@ export const Table = ({ world, RAPIER, placement }) => {
 
   const normal = directionToWorld({ x: 0, y: 1, z: 0 });
 
+  // Moves the table from its rest position by a table-space offset, over the next physics step.
+  const setOffset = (offset) => {
+    const moved = directionToWorld(offset);
+    body.setNextKinematicTranslation({ x: moved.x + x, y: moved.y + y, z: moved.z + z });
+  }
+
   // Distance of a world point above the playfield surface.
   const heightAbovePlayfield = (point) =>
     (point.x - x) * normal.x + (point.y - y) * normal.y + (point.z - z) * normal.z;
@@ -36,6 +44,7 @@ export const Table = ({ world, RAPIER, placement }) => {
     body,
     normal,
     heightAbovePlayfield,
+    setOffset,
     toWorld,
     toLocal,
     directionToWorld,

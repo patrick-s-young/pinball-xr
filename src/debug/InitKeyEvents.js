@@ -3,7 +3,8 @@ import KeyEvents from './KeyEvents';
 const InitKeyEvents = ({
   leftFlipper,
   rightFlipper,
-  plunger
+  plunger,
+  nudge
 }) => {
   const keyEvents = new KeyEvents();
     
@@ -37,6 +38,13 @@ const InitKeyEvents = ({
     keyAction: 'keyup',
     callBack: plunger.release
     });
+  [['KeyZ', 'left'], ['Period', 'right'], ['KeyB', 'front']].forEach(([keyName, side]) => {
+    keyEvents.addSubscriber({
+      keyName,
+      keyAction: 'keydown',
+      callBack: () => nudge.nudge(side)
+      });
+  });
 
   return {
     keyEvents
