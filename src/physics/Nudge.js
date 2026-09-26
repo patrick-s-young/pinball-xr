@@ -1,4 +1,4 @@
-import { NUDGE_CONFIG } from './Nudge.config';
+import { TUNING } from './TUNING';
 
 // Direction the cabinet moves, in table space, for each side the player shoves from.
 const NUDGE_DIRECTIONS = {
@@ -19,7 +19,7 @@ export const Nudge = ({ table, power }) => {
     swingHalfLife,
     contactThreshold,
     swingPeriod,
-    warningsAllowed } = NUDGE_CONFIG;
+    warningsAllowed } = TUNING.nudge;
   const events = new EventTarget();
   let shoves = [];
   let isDisplaced = false;
