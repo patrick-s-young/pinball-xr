@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 // Converts a Visual Pinball table (.vpx) into a pinball-xr table definition (JSON).
 //
-//   npm run import-table -- tables/spike.vpx [src/tables/spike.table.json]
+//   npm run import-table -- tables/spike.vpx [--no-visuals]
+//
+// Writes src/tables/<name>.table.json (physics) and public/tables/<name>.glb (visuals: the
+// table's own meshes, materials, textures, and lights, exported with vpxtool). The GLB keeps
+// Visual Pinball's layout: origin at the playfield's top-left corner, playfield level, metres.
+// Spare parts that table authors keep beside the table are left out of the visuals.
 //
 // Requires vpxtool (https://github.com/francisdb/vpxtool) to read the .vpx. Set the VPXTOOL
 // environment variable to its path, or put it on PATH.
@@ -30,11 +35,93 @@ const roundPoint = (values) => values.map(round);
 // ---------------------------------------------------------------------------------------------
 // Reading the table
 
+const VPXTOOL = process.env.VPXTOOL || 'vpxtool';
+
 const extractTable = (vpxPath) => {
-  const vpxtool = process.env.VPXTOOL || 'vpxtool';
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vpx-import-'));
-  execFileSync(vpxtool, ['extract', '--force', '--no-media', '--output-dir', outputDir, vpxPath], { stdio: 'pipe' });
+  execFileSync(VPXTOOL, ['extract', '--force', '--no-media', '--output-dir', outputDir, vpxPath], { stdio: 'pipe' });
   return outputDir;
+}
+
+// Objects placed entirely this far (m) or more outside the playfield are spare parts that table
+// authors keep beside the table for reference, not part of the machine.
+const SPARE_PART_MARGIN = 0.03;
+
+const readGlb = (buffer) => {
+  const jsonLength = buffer.readUInt32LE(12);
+  return { json: JSON.parse(buffer.slice(20, 20 + jsonLength).toString('utf8')), binary: buffer.slice(20 + jsonLength) };
+}
+
+const writeGlb = ({ json, binary }) => {
+  let text = Buffer.from(JSON.stringify(json), 'utf8');
+  // Chunks are padded to 4 bytes; the JSON chunk with spaces.
+  text = Buffer.concat([text, Buffer.alloc((4 - text.length % 4) % 4, 0x20)]);
+  const header = Buffer.alloc(20);
+  header.write('glTF', 0, 'ascii');
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(20 + text.length + binary.length, 8);
+  header.writeUInt32LE(text.length, 12);
+  header.write('JSON', 16, 'ascii');
+  return Buffer.concat([header, text, binary]);
+}
+
+// Column-major 4x4 matrix of a glTF node's translation, rotation, and scale.
+const nodeMatrix = ({ matrix, translation: [tx, ty, tz] = [0, 0, 0], rotation: [x, y, z, w] = [0, 0, 0, 1], scale: [sx, sy, sz] = [1, 1, 1] }) => matrix || [
+  (1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
+  2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
+  2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
+  tx, ty, tz, 1
+];
+const multiply = (a, b) => Array.from({ length: 16 }, (_, i) => {
+  const column = Math.floor(i / 4), row = i % 4;
+  return [0, 1, 2, 3].reduce((sum, k) => sum + a[k * 4 + row] * b[column * 4 + k], 0);
+});
+const transformPoint = (m, [x, y, z]) => [0, 1, 2].map(r => m[r] * x + m[4 + r] * y + m[8 + r] * z + m[12 + r]);
+
+// Removes spare parts from the GLB's scene: mesh nodes whose bounds lie wholly outside the
+// playfield (GLB coordinates: x across from 0, z down the table from 0). Returns their names.
+const removeSpareParts = (gltf, width, length) => {
+  const removed = [];
+  const outside = (node, world) => {
+    const corners = [];
+    gltf.meshes[node.mesh].primitives.forEach(primitive => {
+      const { min, max } = gltf.accessors[primitive.attributes.POSITION];
+      for (let i = 0; i < 8; i++) corners.push(transformPoint(world, [i & 1 ? max[0] : min[0], i & 2 ? max[1] : min[1], i & 4 ? max[2] : min[2]]));
+    });
+    const xs = corners.map(c => c[0]), zs = corners.map(c => c[2]);
+    return Math.max(...xs) < -SPARE_PART_MARGIN || Math.min(...xs) > width + SPARE_PART_MARGIN ||
+      Math.max(...zs) < -SPARE_PART_MARGIN || Math.min(...zs) > length + SPARE_PART_MARGIN;
+  };
+  const visit = (children, parentMatrix) => children.filter(index => {
+    const node = gltf.nodes[index];
+    const world = multiply(parentMatrix, nodeMatrix(node));
+    if (node.mesh !== undefined && outside(node, world)) {
+      removed.push(node.name);
+      return false;
+    }
+    if (node.children) node.children = visit(node.children, world);
+    return true;
+  });
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  gltf.scenes.forEach(scene => { scene.nodes = visit(scene.nodes, identity); });
+  return removed;
+}
+
+// Exports the table's visuals as a single GLB in metres, without the spare parts beside the
+// table, to outputPath. Returns the names of the spare parts left out.
+const exportVisuals = (vpxPath, outputPath, playfield) => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vpx-visuals-'));
+  try {
+    execFileSync(VPXTOOL, ['export', 'gltf', '--format', 'glb', '--units', 'm', '--output-dir', outputDir, vpxPath], { stdio: 'pipe' });
+    const [file] = fs.readdirSync(outputDir).filter(name => name.endsWith('.glb'));
+    const glb = readGlb(fs.readFileSync(path.join(outputDir, file)));
+    const removed = removeSpareParts(glb.json, playfield.width, playfield.length);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, writeGlb(glb));
+    return removed;
+  } finally {
+    fs.rmSync(outputDir, { recursive: true, force: true });
+  }
 }
 
 const readTable = (extractDir) => {
@@ -316,6 +403,8 @@ const importPlunger = (plunger, convert) => {
     plunger: {
       name: plunger.name,
       tip: roundPoint(convert.point({ x: plunger.center.x, y: tipY })),
+      // Travel from the rest position to full pull.
+      pullDistance: round(convert.length(plunger.stroke * (1 - plunger.park_position))),
       width: round(convert.length(plunger.width)),
       strength: plunger.mech_strength
     }
@@ -414,16 +503,25 @@ const buildDefinition = ({ gamedata, info, items }, sourceName) => {
 }
 
 const main = () => {
-  const [vpxPath, outputArg] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const vpxPath = args.find(arg => arg.startsWith('--') === false);
   if (!vpxPath) {
-    console.error('Usage: npm run import-table -- <table.vpx> [output.table.json]');
+    console.error('Usage: npm run import-table -- <table.vpx> [--no-visuals]');
     process.exit(1);
   }
   const sourceName = path.basename(vpxPath, '.vpx');
-  const outputPath = outputArg || path.join(__dirname, '..', 'src', 'tables', `${sourceName}.table.json`);
+  const outputPath = path.join(__dirname, '..', 'src', 'tables', `${sourceName}.table.json`);
+  const visualsPath = path.join(__dirname, '..', 'public', 'tables', `${sourceName}.glb`);
   const extractDir = extractTable(vpxPath);
   try {
     const definition = buildDefinition(readTable(extractDir), path.basename(vpxPath));
+    if (args.includes('--no-visuals') === false) {
+      const spareParts = exportVisuals(vpxPath, visualsPath, definition.playfield);
+      // Served from public/ by the dev server.
+      definition.visuals = { url: `tables/${sourceName}.glb`, spareParts };
+      console.log(`Wrote ${path.relative(process.cwd(), visualsPath)} (${(fs.statSync(visualsPath).size / 1e6).toFixed(1)} MB)`);
+      if (spareParts.length) console.log(`  left out ${spareParts.length} spare parts beside the table: ${spareParts.slice(0, 6).join(', ')}${spareParts.length > 6 ? ', ...' : ''}`);
+    }
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, JSON.stringify(definition) + '\n');
     const vertices = definition.walls.reduce((sum, wall) => sum + wall.loops.reduce((s, loop) => s + loop.length, 0), 0);
@@ -431,8 +529,12 @@ const main = () => {
     console.log(`  ${definition.walls.length} walls and rubbers (${vertices} outline points), ${definition.slingshots.length} slingshots, ` +
       `${definition.flippers.length} flippers, ${definition.gates.length} gates, ${definition.drains.length} drains, ${definition.triggers.length} triggers`);
     definition.warnings.forEach(warning => console.log(`  warning: ${warning}`));
+    // Skipped elements, grouped by reason (the full list is in the definition's `skipped`).
+    const byReason = {};
+    definition.skipped.forEach(({ type, name, reason }) => (byReason[`${type}: ${reason}`] = byReason[`${type}: ${reason}`] || []).push(name));
     console.log(`  skipped ${definition.skipped.length}:`);
-    definition.skipped.forEach(({ type, name, reason }) => console.log(`    ${type} ${name}: ${reason}`));
+    Object.entries(byReason).forEach(([reason, names]) =>
+      console.log(`    ${reason} (${names.length}): ${names.slice(0, 6).join(', ')}${names.length > 6 ? ', ...' : ''}`));
   } finally {
     fs.rmSync(extractDir, { recursive: true, force: true });
   }

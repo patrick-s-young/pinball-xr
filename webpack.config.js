@@ -8,7 +8,8 @@ module.exports = (env) => ({
   },
   devtool: 'inline-source-map',
   devServer: {
-    static: './dist',
+    // public/ holds generated assets such as table visuals (public/tables/*.glb).
+    static: ['./dist', './public'],
   },
   output: {
     filename: 'bundle.js',

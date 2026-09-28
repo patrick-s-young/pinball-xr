@@ -10,9 +10,10 @@ export const CAMERA = {
 }
 
 // Table loaded when the page URL has no ?table= parameter. See src/tables.
-export const DEFAULT_TABLE = 'spike';
+export const DEFAULT_TABLE = 'import-test';
 
 export const DEBUG = {
-  // The physics wireframe is the only table visual until themed meshes exist.
-  showPhysics: true
+  // Draw the physics wireframe as well as the table's visuals (also: ?physics in the page URL).
+  // Tables without exported visuals always show it.
+  showPhysics: false
 }

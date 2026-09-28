@@ -8,8 +8,8 @@ import { Gamepads } from './input/Gamepads';
 import { HEIGHT_ABOVE_FLOOR, DEFAULT_TABLE } from './App.config';
 import { selectTable } from './tables';
 
-// Desktop emulation: click the floor to place the table, then play with the keyboard or a
-// gamepad.
+// Desktop emulation: click the floor to place the table (or add ?autoplace to the page URL),
+// then play with the keyboard or a gamepad.
 export const AppDev = () => {
   const clock = new THREE.Clock();
   const stats = PerformanceStats();
@@ -40,14 +40,21 @@ export const AppDev = () => {
     game = await createGame({
       definition: selectTable(DEFAULT_TABLE),
       placement: [x, HEIGHT_ABOVE_FLOOR, z],
-      scene: three.scene.self
+      scene: three.scene.self,
+      renderer: three.renderer.self
     });
     Keyboard(game.controls);
     gamepads = Gamepads(game.controls);
+    // Frame the table from in front of and above the player's end, like Visual Pinball's
+    // desktop view. The orbit controls still move the camera from there.
+    three.orbitControls.target.set(x, HEIGHT_ABOVE_FLOOR, z);
+    three.camera.self.position.set(x, HEIGHT_ABOVE_FLOOR + 0.9, z + 0.95);
   }
 
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('click', onClick);
+  // ?autoplace skips the click and places the table under the camera.
+  if (new URLSearchParams(window.location.search).has('autoplace')) onClick();
 
   const animate = () => {
     stats.begin();

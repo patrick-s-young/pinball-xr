@@ -8,11 +8,15 @@ export function DebugRenderer () {
   const attributes = { antialias: true, desynchronized: true, powerPreference: 'high-performance' };
   const context = canvas.getContext('webgl2', attributes) || canvas.getContext('webgl', attributes);
   const renderer = new THREE.WebGLRenderer({ canvas, context });
+  // Table visuals use sRGB textures.
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.setSize( window.innerWidth - 100, window.innerHeight - 100);
   document.body.appendChild( renderer.domElement );
 
   return {
     render: (scene, camera) => renderer.render(scene, camera),
-    get domElement() { return renderer.domElement }
+    get domElement() { return renderer.domElement },
+    get self() { return renderer }
   }
 }

@@ -50,7 +50,8 @@ export const App = () => {
     game = await createGame({
       definition: selectTable(DEFAULT_TABLE),
       placement: [x, y + HEIGHT_ABOVE_FLOOR, z],
-      scene: three.scene.self
+      scene: three.scene.self,
+      renderer: three.renderer.self
     });
     TouchControls({ uiParent, controls: game.controls });
     gamepads = Gamepads(game.controls);

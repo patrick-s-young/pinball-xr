@@ -16,7 +16,7 @@ I am initially developing in vanilla Javascript - along with [Rapier](https://ra
 
 
 ### Progress
-I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, and the physics runs on Rapier. The table is currently drawn as the Rapier debug wireframe until the visual and audio theming phase. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
+I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, physics and visuals: the physics runs on Rapier, and the table is drawn with its own Visual Pinball meshes, materials, and textures. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
 
 ## Application Architecture
 
@@ -29,7 +29,8 @@ Webpack selects the entry point from the `development` environment flag. Both ap
 
 ```mermaid
 flowchart TD
-    VPX["Visual Pinball table (.vpx)"] -->|"npm run import-table"| Definition["src/tables/*.table.json"]
+    VPX["Visual Pinball table (.vpx)"] -->|"npm run import-table"| Definition["src/tables/*.table.json (physics)"]
+    VPX -->|"npm run import-table"| Visuals["public/tables/*.glb (visuals)"]
     Start["Browser loads bundle"] --> Entry{"Entry point"}
     Entry -->|"yarn start"| XRApp["App: WebXR"]
     Entry -->|"yarn dev"| DevApp["AppDev: desktop emulation"]
@@ -45,19 +46,22 @@ flowchart TD
     Touch["Touch buttons (WebXR)"] --> Controls
     Game --> Loop["Animation loop"]
     Loop --> Step["physics update: fixed 1/240 s steps"]
-    Loop --> View["physics wireframe"]
+    Visuals --> View["TableView: table visuals, moved by the physics"]
+    Loop --> View
     Loop --> Render["renderer.render"]
 ```
 
 ### Component Responsibilities
 
 - `src/tables/` holds the imported table definitions and chooses which to load.
-- `src/game/Game.js` runs one game on one table: builds the physics, serves balls, shows tilt messages, and draws the physics wireframe.
+- `src/game/Game.js` runs one game on one table: builds the physics, serves balls, shows tilt messages, and creates the view.
+- `src/view/TableView.js` draws the table's Visual Pinball visuals and moves the flippers, plunger, and ball with the physics.
 - `src/physics/` is the physics. `createPhysics.js` builds the Rapier world from a table definition; `elements/` has one module per kind of table element (walls, slingshots, gates, drains, flippers, plunger, ball, playfield); `Nudge.js` handles nudging and tilt. Every tuning value is in `TUNING.js`.
 - `src/input/` has `Controls.js`, the actions every device drives, plus the keyboard and gamepad / WebXR controller inputs.
 - `src/ui/` has the WebXR touch buttons, the AR button, and the status message for tilt warnings.
 - `src/three/`, `src/webXR/`, `src/meshes/` set up rendering, the AR session and hit testing, and the placement reticle.
 - `src/debug/` has the emulation-mode renderer, the physics wireframe, the debug floor, and the FPS / physics-time overlay.
+- `public/` is served alongside the app; the importer writes table visuals to `public/tables/`.
 - `tools/vpx-import.js` converts Visual Pinball tables; `test/physics/` checks the physics of every imported table.
 
 ### Physics Model
@@ -91,7 +95,7 @@ yarn test:physics (headless physics checks)
 ```
 The equivalent `npm install`, `npm start`, `npm run dev`, and `npm run test:physics` commands also work.
 
-In emulation mode, click the debug floor to place the table. Controls follow Visual Pinball's defaults:
+In emulation mode, click the debug floor to place the table (or open the page with `?autoplace`). Controls follow Visual Pinball's defaults:
 
 | Action | Keyboard | Gamepad | WebXR controllers | WebXR touch |
 |---|---|---|---|---|
@@ -105,17 +109,19 @@ In emulation mode, click the debug floor to place the table. Controls follow Vis
 - A new ball is served to the plunger a second after each drain (or refresh the browser).
 - In emulation mode, the overlay in the top-left shows FPS; click it to cycle to frame time, memory, and physics time per frame.
 - The table loaded is `DEFAULT_TABLE` in `src/App.config.js`. Add `?table=<name>` to the page URL to load another.
+- Add `?physics` to the page URL to draw the physics wireframe over the visuals. Tables without exported visuals always show the wireframe.
 
 ## Designing Tables in Visual Pinball
 
-Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported. The importer converts a `.vpx` file into a table definition the physics builds from; the app's own flippers, plunger, slingshot kicks, nudge, and tilt then run on that layout.
+Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported. The importer converts a `.vpx` file into a table definition the physics builds from, and exports the table's visuals as a GLB; the app's own flippers, plunger, slingshot kicks, nudge, and tilt then run on that layout.
 
 1. Download [vpxtool](https://github.com/francisdb/vpxtool/releases), which reads `.vpx` files, and set the `VPXTOOL` environment variable to its path (or put it on your `PATH`).
 2. Save the table in `tables/`. `.vpx` files are kept out of git.
-3. Run the importer. It writes `src/tables/<name>.table.json` and lists everything it skipped and why:
+3. Run the importer. It writes `src/tables/<name>.table.json` (physics) and `public/tables/<name>.glb` (visuals), and lists everything it skipped and why. Spare parts that table authors keep beside the table (reference bumper caps, pegs, rulers, spare flippers) are left out of the visuals and listed. Add `--no-visuals` to skip the visuals.
    ```sh
    VPXTOOL=/path/to/vpxtool npm run import-table -- tables/<name>.vpx
    ```
+   Like the `.vpx` files, the GLBs are kept out of git, so after cloning, run the importer to regenerate them; without them a table shows the physics wireframe instead.
 4. Add the new file to `TABLES` in `src/tables/index.js`, then load it with `?table=<name>`.
 5. Run `npm run test:physics`. It checks every table for balls getting stuck, passing through walls, or failing to drain, and checks the flippers, plunger, gates, slingshots, and tilt.
 
@@ -131,8 +137,9 @@ What is imported:
 | Plunger | Serve position and strength |
 | Kickers named `Drain` | Drain sensors |
 | Triggers | Recorded for later scoring (no physics effect) |
+| Everything visible: meshes, materials, textures, lights | A GLB drawn by three.js; flippers, plunger, and ball move with the physics |
 
-Not imported yet: ramps, collidable 3D primitives, bumpers, spinners, targets, and anything visual (images, lights, decals). The table script (VBScript) does not run; game rules will be written in JavaScript.
+Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; game rules will be written in JavaScript.
 
 ## Built With
 

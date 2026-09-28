@@ -4,3 +4,6 @@ tables/*.vpx
 
 # Physics test bundle
 test/physics/.build/
+
+# Table visuals exported from the .vpx files by the importer
+public/tables/*.glb
