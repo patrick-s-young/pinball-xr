@@ -4,7 +4,9 @@ export function Renderer() {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true } );
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
-  //renderer.outputEncoding = THREE.sRGBEncoding;
+  // Table visuals use sRGB textures.
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.xr.enabled = true;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;

@@ -1,13 +1,12 @@
-import { PLAYFIELD } from '@src/App.config';
-import { multiplyQuaternions, rotateVector } from '@math';
+import { multiplyQuaternions, quaternionFromAxisAngle, rotateVector } from '@math';
 
 // The tilted table frame: x across the table, y up from the playfield surface, z toward the player.
 // Every static table collider hangs off this one body; moving parts use the toWorld helpers,
 // which describe the table at its rest position. The body is kinematic so a nudge can shove the
 // whole cabinet a few millimetres and let it spring back.
-export const Table = ({ world, RAPIER, placement }) => {
+export const Table = ({ world, RAPIER, placement, slopeRadians }) => {
   const [x, y, z] = placement;
-  const rotation = PLAYFIELD.slopeQuaternion;
+  const rotation = quaternionFromAxisAngle({ x: 1, y: 0, z: 0 }, slopeRadians);
   const body = world.createRigidBody(
     RAPIER.RigidBodyDesc.kinematicPositionBased()
       .setTranslation(x, y, z)

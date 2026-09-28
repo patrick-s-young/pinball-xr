@@ -1,5 +1,6 @@
 // Routes Rapier's collision-start events to handlers registered per collider.
 // Only the ball enables events, so every event pairs the ball with one other collider.
+// Handlers take no arguments.
 export const CollisionEvents = ({ RAPIER }) => {
   const eventQueue = new RAPIER.EventQueue(true);
   const handlers = new Map();

@@ -7,7 +7,9 @@
     "watch": "webpack --watch",
     "build": "webpack",
     "start": "webpack serve --open --https --env development=false",
-    "dev": "webpack serve --open --https --env development=true"
+    "dev": "webpack serve --open --https --env development=true",
+    "import-table": "node tools/vpx-import.js",
+    "test:physics": "webpack --config test/physics/webpack.config.js --stats errors-warnings && node test/physics/.build/physics.test.js"
   },
   "keywords": [],
   "author": "Patrick S. Young",
