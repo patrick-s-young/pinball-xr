@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VIEW } from '@src/App.config';
 
 // Desktop renderer for emulation mode. The canvas asks for a desynchronized (low-latency)
 // context, which lets the browser show each frame without waiting for the page compositor,
@@ -11,6 +12,7 @@ export function DebugRenderer () {
   // Table visuals use sRGB textures.
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = VIEW.lighting.exposure;
   renderer.setSize( window.innerWidth - 100, window.innerHeight - 100);
   document.body.appendChild( renderer.domElement );
 

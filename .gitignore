@@ -8,5 +8,8 @@ test/physics/.build/
 # Table visuals exported from the .vpx files by the importer
 public/tables/*.glb
 
-# Table sounds exported from the .vpx files by the importer
-public/tables/*/sounds/
+# Table sounds and environment images exported from the .vpx files by the importer
+public/tables/*/
+
+# Visual Pinball per-table settings files
+tables/*.ini

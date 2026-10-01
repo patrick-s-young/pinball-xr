@@ -1,10 +1,8 @@
 // Tables imported from Visual Pinball with `npm run import-table -- <table.vpx>`.
 import spike from './spike.table.json';
-import importTest from './import-test.table.json';
 
 export const TABLES = {
-  spike,
-  'import-test': importTest
+  spike
 };
 
 // The table to load: `?table=<name>` in the page URL, or defaultTable.

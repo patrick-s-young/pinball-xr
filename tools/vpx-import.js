@@ -209,6 +209,77 @@ const removeSpareParts = (gltf, width, length) => {
   return removed;
 }
 
+// Shadows that Visual Pinball tables fake in their script, found by the common idioms:
+//   ball shadows (ninuzzu):    BallShadow = Array (BallShadow1, BallShadow2, ...)
+//   flipper shadows (ninuzzu): FlipperLSh.RotZ = LeftFlipper.CurrentAngle
+// Returns { ballShadows: [names], flipperShadows: { shadowName: flipperName } }.
+const scriptShadows = (script) => {
+  const ballArray = script.match(/^\s*BallShadow\s*=\s*Array\s*\(([^)]*)\)/im);
+  const ballShadows = ballArray ? ballArray[1].split(',').map(name => name.trim()).filter(Boolean) : [];
+  const flipperShadows = {};
+  for (const [, shadow, flipper] of script.matchAll(/^\s*(\w+)\.RotZ\s*=\s*(\w+)\.CurrentAngle/gim)) flipperShadows[shadow] = flipper;
+  return { ballShadows, flipperShadows };
+}
+
+// The table's playfield lights, drawn by Visual Pinball as a glow from the bulb that fades out
+// over the falloff radius, clipped to the light's outline. Positions are in the GLB's coordinates
+// (metres from the playfield's top-left corner). A light is on if it starts on, or the script
+// turns on a collection holding it (For each xx in GI:xx.State = 1). Lights a slingshot's script
+// turns off when it kicks (gi1.State = 0 in RightSlingShot_Slingshot) are listed under
+// offWhenKicked, with how long they stay off (until its timer turns them back on).
+const tableLights = ({ items, collections, script }) => {
+  const lights = items.filter(({ type, data }) => type === 'Light' && !data.is_backglass).map(({ data }) => data);
+  const onByScript = new Set();
+  for (const [, , collection] of script.matchAll(/^\s*For\s+each\s+(\w+)\s+in\s+(\w+)\s*:\s*\1\.State\s*=\s*1/gim)) {
+    const found = collections.find(c => c.name.toLowerCase() === collection.toLowerCase());
+    (found?.items || []).forEach(name => onByScript.add(name.toLowerCase()));
+  }
+  const offWhenKicked = {};
+  const walls = Object.fromEntries(items.filter(({ type }) => type === 'Wall').map(({ data }) => [data.name.toLowerCase(), data]));
+  for (const [, slingshot, body] of script.matchAll(/^\s*Sub\s+(\w+)_Slingshot\b([\s\S]*?)^\s*End\s+Sub/gim)) {
+    const names = [...body.matchAll(/(\w+)\.State\s*=\s*0/gi)].map(([, name]) => name.toLowerCase());
+    if (names.length === 0) continue;
+    // Its timer turns them back on at "Case n", the (n + 1)th tick.
+    const timer = script.match(new RegExp(`^\\s*Sub\\s+${slingshot}_Timer\\b([\\s\\S]*?)^\\s*End\\s+Sub`, 'im'));
+    const backOn = timer && timer[1].match(new RegExp(`Case\\s+(\\d+)\\s*:[^\\n]*\\b(${names.join('|')})\\.State\\s*=\\s*1`, 'i'));
+    const interval = walls[slingshot.toLowerCase()]?.timer_interval ?? 50;
+    const seconds = backOn ? (Number(backOn[1]) + 1) * interval / 1000 : 0.25;
+    names.forEach(name => { offWhenKicked[name] = { slingshot, seconds }; });
+  }
+  return lights.map(light => {
+    const key = light.name.toLowerCase();
+    return {
+      name: light.name,
+      center: [round(light.center.x * METRES_PER_VPU), round(light.center.y * METRES_PER_VPU)],
+      falloff: round(light.falloff_radius * METRES_PER_VPU),
+      falloffPower: light.falloff_power,
+      color: light.color,
+      intensity: light.intensity,
+      on: light.state > 0 || onByScript.has(key),
+      ...(offWhenKicked[key] && { offWhenKicked: offWhenKicked[key] })
+    };
+  });
+}
+
+// Copies the table's environment image (what metal, plastic and the ball reflect) to outputDir.
+// Returns its file name, or null if the table has none.
+const exportEnvironment = (vpxPath, imageName, outputDir) => {
+  if (!imageName) return null;
+  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vpx-environment-'));
+  try {
+    execFileSync(VPXTOOL, ['extract', '--force', '--only', `images/${imageName}.*`, '--output-dir', extractDir, vpxPath], { stdio: 'pipe' });
+    const imagesDir = path.join(extractDir, 'images');
+    const [file] = fs.existsSync(imagesDir) ? fs.readdirSync(imagesDir) : [];
+    if (!file) return null;
+    fs.mkdirSync(outputDir, { recursive: true });
+    const name = `environment${path.extname(file).toLowerCase()}`;
+    fs.copyFileSync(path.join(imagesDir, file), path.join(outputDir, name));
+    return name;
+  } finally {
+    fs.rmSync(extractDir, { recursive: true, force: true });
+  }
+}
+
 // Exports the table's visuals as a single GLB in metres, without the spare parts beside the
 // table, to outputPath. Returns the names of the spare parts left out.
 const exportVisuals = (vpxPath, outputPath, playfield) => {
@@ -235,7 +306,8 @@ const readTable = (extractDir) => {
       const [type] = Object.keys(item);
       return { type, data: item[type] };
     });
-  return { gamedata: read('gamedata.json'), info: read('info.json'), collections: read('collections.json'), items };
+  const script = fs.readFileSync(path.join(extractDir, 'script.vbs'), 'utf8');
+  return { gamedata: read('gamedata.json'), info: read('info.json'), collections: read('collections.json'), script, items };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -620,8 +692,24 @@ const main = () => {
     const definition = buildDefinition(table, path.basename(vpxPath));
     if (args.includes('--no-visuals') === false) {
       const spareParts = exportVisuals(vpxPath, visualsPath, definition.playfield);
+      const tableDir = path.join(__dirname, '..', 'public', 'tables', sourceName);
+      const environment = exportEnvironment(vpxPath, table.gamedata.env_image, tableDir);
       // Served from public/ by the dev server.
-      definition.visuals = { url: `tables/${sourceName}.glb`, spareParts };
+      definition.visuals = {
+        url: `tables/${sourceName}.glb`,
+        environment: environment && { url: `tables/${sourceName}/${environment}`, intensity: table.gamedata.env_emission_scale ?? 1 },
+        // How strongly the playfield reflects what is on it, and the ball.
+        reflections: {
+          playfield: table.gamedata.playfield_reflection_strength ?? 0,
+          ball: table.gamedata.ball_playfield_reflection_strength ?? 1
+        },
+        shadows: scriptShadows(table.script),
+        lights: tableLights(table),
+        spareParts
+      };
+      if (environment) console.log(`  environment image: ${table.gamedata.env_image}`);
+      const { ballShadows, flipperShadows } = definition.visuals.shadows;
+      console.log(`  shadows from the script: ${ballShadows.length} ball, ${Object.keys(flipperShadows).length} flipper`);
       console.log(`Wrote ${path.relative(process.cwd(), visualsPath)} (${(fs.statSync(visualsPath).size / 1e6).toFixed(1)} MB)`);
       if (spareParts.length) console.log(`  left out ${spareParts.length} spare parts beside the table: ${spareParts.slice(0, 6).join(', ')}${spareParts.length > 6 ? ', ...' : ''}`);
     }
