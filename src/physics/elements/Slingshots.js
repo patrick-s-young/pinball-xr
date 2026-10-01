@@ -11,7 +11,7 @@ const SENSOR_DEPTH = 0.008;
 // into the face faster than minTriggerSpeed, and each kick varies slightly in speed and
 // direction, as on a real table.
 export const Slingshots = (physics, slingshots) => {
-  const { table, ball, power, collisionEvents } = physics;
+  const { table, ball, power, collisionEvents, emit } = physics;
   const { referenceForce, kickSpeed, minTriggerSpeed, speedVariation, angleVariation } = TUNING.slingshot;
 
   return slingshots.map(({ name, segment: [x1, z1, x2, z2], normal: [normalX, normalZ], force }) => {
@@ -33,6 +33,7 @@ export const Slingshots = (physics, slingshots) => {
         z: normalZ * Math.cos(angle) - normalX * Math.sin(angle)
       });
       kickBall(ball, direction, speed * (1 + (Math.random() * 2 - 1) * speedVariation));
+      emit('slingshot', { name, position: ball.body.translation() });
     });
 
     return { name, sensor };

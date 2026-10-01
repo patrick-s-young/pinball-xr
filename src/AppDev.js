@@ -41,7 +41,8 @@ export const AppDev = () => {
       definition: selectTable(DEFAULT_TABLE),
       placement: [x, HEIGHT_ABOVE_FLOOR, z],
       scene: three.scene.self,
-      renderer: three.renderer.self
+      renderer: three.renderer.self,
+      camera: three.camera.self
     });
     Keyboard(game.controls);
     gamepads = Gamepads(game.controls);

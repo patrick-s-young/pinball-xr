@@ -23,10 +23,12 @@ const wallMesh = ({ loops, height, cap }) => {
   return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
 }
 
-export const Walls = ({ world, RAPIER, table }, walls) => walls.map(wall => {
+export const Walls = ({ world, RAPIER, table, colliderInfo }, walls) => walls.map(wall => {
   const { vertices, indices } = wallMesh(wall);
   const colliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES)
     .setCollisionGroups(COLLISION_GROUPS.table);
   withMaterial(RAPIER, colliderDesc, { friction: wall.friction, restitution: wall.restitution });
-  return { name: wall.name, collider: world.createCollider(colliderDesc, table.body) };
+  const collider = world.createCollider(colliderDesc, table.body);
+  colliderInfo.set(collider.handle, { kind: wall.kind, name: wall.name });
+  return { name: wall.name, collider };
 });

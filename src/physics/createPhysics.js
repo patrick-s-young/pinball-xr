@@ -40,23 +40,39 @@ export const createPhysics = async ({ definition, placement }) => {
   const contactFilters = ContactFilters({ RAPIER });
   // Playfield power for flippers and slingshots. A tilt switches it off.
   const power = { isOn: true };
-  const drainEvents = new EventTarget();
+  // What happens on the table, for sound and, later, scoring. See `events` below.
+  const events = new EventTarget();
+  const emit = (type, detail) => events.dispatchEvent(new CustomEvent(type, { detail }));
+  // Collider handle -> { kind, name } for the things the ball can hit.
+  const colliderInfo = new Map();
 
   const ball = Ball({ world, RAPIER, table }, {
     radius: ballDefinition.radius,
     // Resting against the plunger tip.
     servePosition: { x: plungerDefinition.tip[0], y: ballDefinition.radius, z: plungerDefinition.tip[1] - ballDefinition.radius - 0.0005 }
   });
-  const physics = { world, RAPIER, table, collisionEvents, contactFilters, power, ball };
+  const physics = { world, RAPIER, table, collisionEvents, contactFilters, power, ball, emit, colliderInfo };
   const playfieldMaterial = { friction: playfield.friction, restitution: playfield.restitution };
 
   Playfield(physics, playfield);
   const walls = Walls(physics, definition.walls);
   const slingshots = Slingshots(physics, definition.slingshots);
   const gates = Gates(physics, definition.gates);
-  Drains(physics, definition.drains, () => drainEvents.dispatchEvent(new Event('drain')));
+  Drains(physics, definition.drains, () => emit('drain', { position: ball.body.translation() }));
   const plunger = Plunger(physics, plungerDefinition, playfieldMaterial);
   const flippers = definition.flippers.map(flipper => Flipper(physics, flipper));
+  flippers.forEach(flipper => colliderInfo.set(flipper.collider.handle, { kind: 'flipper', name: flipper.name }));
+
+  // Every time the ball touches something it can hit: what, and how fast the ball was moving.
+  // `speed` is the ball's speed; `normalSpeed` is how fast it was moving into the playfield, for
+  // landing after a jump.
+  collisionEvents.onAnyCollisionStart((handle1, handle2) => {
+    const info = colliderInfo.get(handle1 === ball.collider.handle ? handle2 : handle1);
+    if (info === undefined) return;
+    const velocity = ball.getVelocityBeforeStep();
+    const normalSpeed = -(velocity.x * table.normal.x + velocity.y * table.normal.y + velocity.z * table.normal.z);
+    emit('hit', { ...info, speed: Math.hypot(velocity.x, velocity.y, velocity.z), normalSpeed, position: ball.body.translation() });
+  });
   const nudge = Nudge({ table, power });
 
   const loop = FixedStepLoop({
@@ -84,10 +100,17 @@ export const createPhysics = async ({ definition, placement }) => {
     flippers,
     leftFlipper: flipperGroup(flippers.filter(flipper => flipper.side === 'left')),
     rightFlipper: flipperGroup(flippers.filter(flipper => flipper.side === 'right')),
+    // Table events, each a CustomEvent whose detail includes a world `position`:
+    //   flipper { name, side, up }, slingshot { name }, plunger { pulling }, drain, serve,
+    //   hit { kind: 'wall' | 'rubber' | 'flipper' | 'gate' | 'floor', name, speed, normalSpeed }.
+    events,
     // Puts a ball at rest against the plunger.
-    serveBall: () => ball.serve(),
+    serveBall: () => {
+      ball.serve();
+      emit('serve', { position: ball.spawnPoint });
+    },
     // Registers a handler for the ball draining.
-    onDrain: (handler) => drainEvents.addEventListener('drain', handler),
+    onDrain: (handler) => events.addEventListener('drain', handler),
     // Call once per rendered frame with the frame's elapsed seconds.
     update: loop.update
   }

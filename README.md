@@ -16,7 +16,7 @@ I am initially developing in vanilla Javascript - along with [Rapier](https://ra
 
 
 ### Progress
-I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, physics and visuals: the physics runs on Rapier, and the table is drawn with its own Visual Pinball meshes, materials, and textures. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
+I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, physics and visuals: the physics runs on Rapier, and the table is drawn with its own Visual Pinball meshes, materials, and textures and plays its own sounds. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
 
 ## Application Architecture
 
@@ -31,6 +31,7 @@ Webpack selects the entry point from the `development` environment flag. Both ap
 flowchart TD
     VPX["Visual Pinball table (.vpx)"] -->|"npm run import-table"| Definition["src/tables/*.table.json (physics)"]
     VPX -->|"npm run import-table"| Visuals["public/tables/*.glb (visuals)"]
+    VPX -->|"npm run import-table"| Sounds["public/tables/*/sounds (sounds)"]
     Start["Browser loads bundle"] --> Entry{"Entry point"}
     Entry -->|"yarn start"| XRApp["App: WebXR"]
     Entry -->|"yarn dev"| DevApp["AppDev: desktop emulation"]
@@ -48,6 +49,8 @@ flowchart TD
     Loop --> Step["physics update: fixed 1/240 s steps"]
     Visuals --> View["TableView: table visuals, moved by the physics"]
     Loop --> View
+    Sounds --> Audio["TableAudio: table sounds for physics events"]
+    Loop --> Audio
     Loop --> Render["renderer.render"]
 ```
 
@@ -56,6 +59,7 @@ flowchart TD
 - `src/tables/` holds the imported table definitions and chooses which to load.
 - `src/game/Game.js` runs one game on one table: builds the physics, serves balls, shows tilt messages, and creates the view.
 - `src/view/TableView.js` draws the table's Visual Pinball visuals and moves the flippers, plunger, and ball with the physics.
+- `src/audio/TableAudio.js` plays the table's sounds for physics events (flippers, plunger, slingshots, drain, ball release, hits, rolling) as positional audio from where they happen.
 - `src/physics/` is the physics. `createPhysics.js` builds the Rapier world from a table definition; `elements/` has one module per kind of table element (walls, slingshots, gates, drains, flippers, plunger, ball, playfield); `Nudge.js` handles nudging and tilt. Every tuning value is in `TUNING.js`.
 - `src/input/` has `Controls.js`, the actions every device drives, plus the keyboard and gamepad / WebXR controller inputs.
 - `src/ui/` has the WebXR touch buttons, the AR button, and the status message for tilt warnings.
@@ -78,8 +82,9 @@ flowchart TD
 - **Nudge.** A nudge shoves the whole cabinet 15 mm and lets it spring back over 0.1 s; the flippers move with it. As on a real table, the ball is affected only through contact: a nudge knocks a ball off a wall, post, or flipper it is touching, and does almost nothing to a ball rolling freely.
 - **Tilt.** A plumb-bob model. Each nudge adds to the bob's swing, which dies away over time, and while the swing is high the bob strikes the tilt ring once per half swing. Two quick nudges give a warning, the first two strikes are warnings, and the third tilts the machine: flippers and slingshots lose power until the ball drains. The plunger still works, and the next ball starts with the tilt cleared.
 - **Drain.** A sensor at each Visual Pinball kicker named `Drain`.
+- **Events.** The physics announces what happens on the table through `physics.events`: flippers firing, slingshot kicks, the plunger, drains, serves, and every hit with what was hit and how fast. Sound uses them; scoring will too.
 
-Tuning values are all in `src/physics/TUNING.js`: timestep and solver settings, ball mass and rolling resistance, how Visual Pinball's flipper, plunger, and slingshot settings map onto the runtime, and nudge and tilt sensitivity. Changing them never needs a re-import.
+Tuning values are all in `src/physics/TUNING.js`: timestep and solver settings, ball mass and rolling resistance, how Visual Pinball's flipper, plunger, and slingshot settings map onto the runtime, sound volume and how ball speed maps onto Visual Pinball's sound thresholds, and nudge and tilt sensitivity. Changing them never needs a re-import.
 
 ## Running Locally
 
@@ -117,11 +122,11 @@ Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) 
 
 1. Download [vpxtool](https://github.com/francisdb/vpxtool/releases), which reads `.vpx` files, and set the `VPXTOOL` environment variable to its path (or put it on your `PATH`).
 2. Save the table in `tables/`. `.vpx` files are kept out of git.
-3. Run the importer. It writes `src/tables/<name>.table.json` (physics) and `public/tables/<name>.glb` (visuals), and lists everything it skipped and why. Spare parts that table authors keep beside the table (reference bumper caps, pegs, rulers, spare flippers) are left out of the visuals and listed. Add `--no-visuals` to skip the visuals.
+3. Run the importer. It writes `src/tables/<name>.table.json` (physics), `public/tables/<name>.glb` (visuals), and `public/tables/<name>/sounds/` (sounds), and lists everything it skipped and why. Spare parts that table authors keep beside the table (reference bumper caps, pegs, rulers, spare flippers) are left out of the visuals and listed. Add `--no-visuals` or `--no-sounds` to skip them.
    ```sh
    VPXTOOL=/path/to/vpxtool npm run import-table -- tables/<name>.vpx
    ```
-   Like the `.vpx` files, the GLBs are kept out of git, so after cloning, run the importer to regenerate them; without them a table shows the physics wireframe instead.
+   Like the `.vpx` files, the GLBs and sounds are kept out of git, so after cloning, run the importer to regenerate them; without them a table shows the physics wireframe instead and is silent.
 4. Add the new file to `TABLES` in `src/tables/index.js`, then load it with `?table=<name>`.
 5. Run `npm run test:physics`. It checks every table for balls getting stuck, passing through walls, or failing to drain, and checks the flippers, plunger, gates, slingshots, and tilt.
 
@@ -138,8 +143,9 @@ What is imported:
 | Kickers named `Drain` | Drain sensors |
 | Triggers | Recorded for later scoring (no physics effect) |
 | Everything visible: meshes, materials, textures, lights | A GLB drawn by three.js; flippers, plunger, and ball move with the physics |
+| Sounds, and the collections that give elements hit sounds | The sounds Visual Pinball's standard script plays for each event, hit, and the rolling ball, with its speed thresholds, volumes, and pitches |
 
-Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; game rules will be written in JavaScript.
+Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; its sound calls are reproduced from Visual Pinball's standard script conventions (the importer reports any sound or collection it cannot map), and game rules will be written in JavaScript.
 
 ## Built With
 

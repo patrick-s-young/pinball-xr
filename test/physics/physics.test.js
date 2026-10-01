@@ -303,6 +303,36 @@ const testTable = async (tableName, definition) => {
     ]);
   }
 
+  // Table events, which drive sound (and later scoring).
+  {
+    const { physics } = await setup();
+    const seen = [];
+    ['flipper', 'slingshot', 'plunger', 'drain', 'serve', 'hit'].forEach(type =>
+      physics.events.addEventListener(type, ({ detail }) => seen.push(type === 'hit' ? `hit:${detail.kind}` : type)));
+    const count = (type) => seen.filter(event => event === type).length;
+    physics.serveBall();
+    run(physics, 0.3);
+    plunge(physics, 1);
+    run(physics, 2);
+    physics.leftFlipper.onFlipperUp();
+    physics.leftFlipper.onFlipperUp();
+    run(physics, 0.1);
+    physics.leftFlipper.onFlipperDown();
+    const lines = [
+      check(count('serve') === 1 && count('plunger') === 2, `serve ${count('serve')}, plunger pull and release ${count('plunger')}`),
+      check(count('hit:wall') + count('hit:rubber') > 0, `the plunge hits walls (${count('hit:wall') + count('hit:rubber')})`),
+      check(count('flipper') === 2, `a press and release fire the flipper once each (${count('flipper')})`)
+    ];
+    if (definition.gates.length) lines.push(check(count('hit:gate') > 0, `the plunge passes the gate (${count('hit:gate')})`));
+    if (definition.slingshots.length) {
+      const [x1, z1, x2, z2] = definition.slingshots[0].segment; const [nx, nz] = definition.slingshots[0].normal;
+      place(physics, { x: (x1 + x2) / 2 + nx * 0.05, z: (z1 + z2) / 2 + nz * 0.05 }, { x: -nx * 0.8, y: 0, z: -nz * 0.8 });
+      run(physics, 0.3);
+      lines.push(check(count('slingshot') === 1, `a slingshot kick fires once (${count('slingshot')})`));
+    }
+    report('Table events', lines);
+  }
+
   // Cost of a physics step.
   {
     const { physics } = await setup();
