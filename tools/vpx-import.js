@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Converts a Visual Pinball table (.vpx) into a pinball-xr table definition (JSON).
 //
-//   npm run import-table -- tables/spike.vpx [--no-visuals]
+//   npm run import-table -- tables/spike.vpx [--no-visuals] [--no-sounds]
 //
-// Writes src/tables/<name>.table.json (physics) and public/tables/<name>.glb (visuals: the
-// table's own meshes, materials, textures, and lights, exported with vpxtool). The GLB keeps
-// Visual Pinball's layout: origin at the playfield's top-left corner, playfield level, metres.
-// Spare parts that table authors keep beside the table are left out of the visuals.
+// Writes src/tables/<name>.table.json (physics), public/tables/<name>.glb (visuals: the table's own
+// meshes, materials, textures, and lights, exported with vpxtool), and public/tables/<name>/sounds/
+// (the sounds the table plays). The GLB keeps Visual Pinball's layout: origin at the playfield's
+// top-left corner, playfield level, metres. Spare parts that table authors keep beside the table
+// are left out of the visuals.
 //
 // Requires vpxtool (https://github.com/francisdb/vpxtool) to read the .vpx. Set the VPXTOOL
 // environment variable to its path, or put it on PATH.
@@ -42,6 +43,107 @@ const extractTable = (vpxPath) => {
   execFileSync(VPXTOOL, ['extract', '--force', '--no-media', '--output-dir', outputDir, vpxPath], { stdio: 'pipe' });
   return outputDir;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Sounds
+//
+// Visual Pinball plays a table's sounds from its script, which does not run here. Most tables
+// start from Visual Pinball's standard script, so its conventions are used: these sounds for these
+// events, and a hit sound for each element in these collections. Speeds are in Visual Pinball's
+// units; TUNING.audio converts the ball's speed into them. Sound names are matched without regard
+// to case, and anything the table does not have is reported and left out.
+const STANDARD_EVENT_SOUNDS = {
+  flipperUp: ['fx_flipperup'],
+  flipperDown: ['fx_flipperdown'],
+  plungerPull: ['plungerpull'],
+  plungerRelease: ['plunger'],
+  drain: ['drain'],
+  ballRelease: ['ballrelease'],
+  flipperHit: ['flip_hit_1', 'flip_hit_2', 'flip_hit_3'],
+  rolling: ['fx_ballrolling0'],
+  ballDrop: ['fx_ball_drop0']
+};
+const RUBBER_HIT = ['rubber_hit_1', 'rubber_hit_2', 'rubber_hit_3'];
+// For each collection, hit sounds by the ball's minimum speed, fastest first.
+const STANDARD_HIT_SOUNDS = {
+  Rubbers: [{ minSpeed: 20, sounds: ['fx_rubber2'] }, { minSpeed: 6, sounds: RUBBER_HIT }],
+  Posts: [{ minSpeed: 16, sounds: ['fx_rubber2'] }, { minSpeed: 6, sounds: RUBBER_HIT }],
+  Pins: [{ minSpeed: 0, sounds: ['pinhit_low'] }],
+  Targets: [{ minSpeed: 0, sounds: ['target'] }],
+  Metals_Thin: [{ minSpeed: 0, sounds: ['metalhit_thin'] }],
+  Metals_Medium: [{ minSpeed: 0, sounds: ['metalhit_medium'] }],
+  Metals2: [{ minSpeed: 0, sounds: ['metalhit2'] }],
+  Gates: [{ minSpeed: 0, sounds: ['gate4'] }]
+};
+const slingshotSounds = (name) => /left/i.test(name) ? ['left_slingshot'] : /right/i.test(name) ? ['right_slingshot'] : [];
+
+const extractSounds = (vpxPath) => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vpx-sounds-'));
+  execFileSync(VPXTOOL, ['extract', '--force', '--only', 'sounds/*', '--only', 'sounds.json', '--output-dir', outputDir, vpxPath], { stdio: 'pipe' });
+  return outputDir;
+}
+
+// Maps the table's events and elements to its sounds, copies the sounds used to outputDir, and
+// returns the definition's `sounds` section plus a report of what could not be matched.
+const importSounds = (vpxPath, definition, collections, outputDir, url) => {
+  const extractDir = extractSounds(vpxPath);
+  try {
+    // Lower-case sound name -> file in the extract. A table without sounds has no sounds folder.
+    const soundsDir = path.join(extractDir, 'sounds');
+    const available = new Map((fs.existsSync(soundsDir) ? fs.readdirSync(soundsDir) : [])
+      .map(file => [path.basename(file, path.extname(file)).toLowerCase(), file]));
+    const used = new Set();
+    const missing = new Set();
+    const pick = (names) => names.filter(name => {
+      if (available.has(name)) { used.add(name); return true; }
+      missing.add(name);
+      return false;
+    });
+
+    const events = {};
+    Object.entries(STANDARD_EVENT_SOUNDS).forEach(([event, names]) => {
+      const found = pick(names);
+      if (found.length) events[event] = found;
+    });
+
+    const slingshots = {};
+    definition.slingshots.forEach(({ name }) => {
+      const found = pick(slingshotSounds(name));
+      if (found.length) slingshots[name] = found;
+    });
+
+    // Element name -> collection, for collections that fire hit events and have a known sound.
+    const hits = {};
+    const hitProfiles = {};
+    const unknownCollections = [];
+    collections.filter(collection => collection.fire_events && (collection.items || []).length).forEach(collection => {
+      const profile = STANDARD_HIT_SOUNDS[collection.name];
+      if (profile === undefined) { unknownCollections.push(collection.name); return; }
+      const tiers = profile.map(tier => ({ minSpeed: tier.minSpeed, sounds: pick(tier.sounds) })).filter(tier => tier.sounds.length);
+      if (tiers.length === 0) return;
+      hitProfiles[collection.name] = tiers;
+      collection.items.forEach(item => { hits[item] = collection.name; });
+    });
+
+    fs.mkdirSync(outputDir, { recursive: true });
+    const files = {};
+    used.forEach(name => {
+      const file = available.get(name);
+      fs.copyFileSync(path.join(extractDir, 'sounds', file), path.join(outputDir, file));
+      files[name] = `${url}/${file}`;
+    });
+
+    return {
+      sounds: { files, events, slingshots, hits, hitProfiles },
+      report: { used: used.size, available: available.size, missing: [...missing], unknownCollections }
+    };
+  } finally {
+    fs.rmSync(extractDir, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Visuals
 
 // Objects placed entirely this far (m) or more outside the playfield are spare parts that table
 // authors keep beside the table for reference, not part of the machine.
@@ -133,7 +235,7 @@ const readTable = (extractDir) => {
       const [type] = Object.keys(item);
       return { type, data: item[type] };
     });
-  return { gamedata: read('gamedata.json'), info: read('info.json'), items };
+  return { gamedata: read('gamedata.json'), info: read('info.json'), collections: read('collections.json'), items };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -506,7 +608,7 @@ const main = () => {
   const args = process.argv.slice(2);
   const vpxPath = args.find(arg => arg.startsWith('--') === false);
   if (!vpxPath) {
-    console.error('Usage: npm run import-table -- <table.vpx> [--no-visuals]');
+    console.error('Usage: npm run import-table -- <table.vpx> [--no-visuals] [--no-sounds]');
     process.exit(1);
   }
   const sourceName = path.basename(vpxPath, '.vpx');
@@ -514,13 +616,28 @@ const main = () => {
   const visualsPath = path.join(__dirname, '..', 'public', 'tables', `${sourceName}.glb`);
   const extractDir = extractTable(vpxPath);
   try {
-    const definition = buildDefinition(readTable(extractDir), path.basename(vpxPath));
+    const table = readTable(extractDir);
+    const definition = buildDefinition(table, path.basename(vpxPath));
     if (args.includes('--no-visuals') === false) {
       const spareParts = exportVisuals(vpxPath, visualsPath, definition.playfield);
       // Served from public/ by the dev server.
       definition.visuals = { url: `tables/${sourceName}.glb`, spareParts };
       console.log(`Wrote ${path.relative(process.cwd(), visualsPath)} (${(fs.statSync(visualsPath).size / 1e6).toFixed(1)} MB)`);
       if (spareParts.length) console.log(`  left out ${spareParts.length} spare parts beside the table: ${spareParts.slice(0, 6).join(', ')}${spareParts.length > 6 ? ', ...' : ''}`);
+    }
+    if (args.includes('--no-sounds') === false) {
+      const soundsDir = path.join(__dirname, '..', 'public', 'tables', sourceName, 'sounds');
+      fs.rmSync(soundsDir, { recursive: true, force: true });
+      const { sounds, report } = importSounds(vpxPath, definition, table.collections, soundsDir, `tables/${sourceName}/sounds`);
+      if (report.available === 0) {
+        fs.rmSync(soundsDir, { recursive: true, force: true });
+        console.log('The table has no sounds.');
+      } else {
+        definition.sounds = sounds;
+        console.log(`Wrote ${path.relative(process.cwd(), soundsDir)} (${report.used} of the table's ${report.available} sounds)`);
+        if (report.missing.length) console.log(`  the table has no ${report.missing.join(', ')}; those events are silent`);
+        if (report.unknownCollections.length) console.log(`  collections with hit events but no standard sound: ${report.unknownCollections.join(', ')}`);
+      }
     }
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, JSON.stringify(definition) + '\n');

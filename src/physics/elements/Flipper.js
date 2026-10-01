@@ -28,7 +28,7 @@ const batPoints = ({ baseRadius, tipRadius, length, height, restDirection: [dire
 // power near the up stop, and a return spring. Because the flipper has mass and finite torque,
 // the ball can push it back, which makes catches and dead-flipper bounces possible.
 // definition is an imported flipper; Visual Pinball's strength and mass scale TUNING.flipper.
-export const Flipper = ({ world, RAPIER, table, power }, definition) => {
+export const Flipper = ({ world, RAPIER, table, power, emit }, definition) => {
   const { referenceStrength, referenceMass } = TUNING.flipper;
   const {
     name,
@@ -67,8 +67,15 @@ export const Flipper = ({ world, RAPIER, table, power }, definition) => {
 
   let isEnergized = false;
 
-  const onFlipperUp = () => { isEnergized = true; }
-  const onFlipperDown = () => { isEnergized = false; }
+  // The coil only fires, and is only heard, while the playfield has power.
+  const onFlipperUp = () => {
+    if (isEnergized === false && power.isOn) emit('flipper', { name, side, up: true, position: pivotWorld });
+    isEnergized = true;
+  }
+  const onFlipperDown = () => {
+    if (isEnergized && power.isOn) emit('flipper', { name, side, up: false, position: pivotWorld });
+    isEnergized = false;
+  }
 
   // Angle travelled from the rest stop toward the up stop, in radians.
   const getStroke = () => {

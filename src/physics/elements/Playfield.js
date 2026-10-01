@@ -16,5 +16,7 @@ export const Playfield = (physics, { width, length, glassHeight, friction, resti
     { size: [width, glassHeight, BOUNDARY_THICKNESS], center: [0, glassHeight / 2, -(length + BOUNDARY_THICKNESS) / 2] },
     { size: [width, glassHeight, BOUNDARY_THICKNESS], center: [0, glassHeight / 2, (length + BOUNDARY_THICKNESS) / 2] }
   ];
-  return boxes.map(box => tableCuboid(physics, { ...box, material }));
+  const [floor, ...rest] = boxes.map(box => tableCuboid(physics, { ...box, material }));
+  physics.colliderInfo.set(floor.handle, { kind: 'floor', name: 'Playfield' });
+  return [floor, ...rest];
 }

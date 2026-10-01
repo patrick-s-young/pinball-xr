@@ -8,7 +8,7 @@ const STOP_DEPTH = 0.004;
 // tip. Holding the plunger builds pull over fullPullTime; releasing launches a ball that is
 // resting at the plunger, faster the further it was pulled.
 export const Plunger = (physics, { tip: [tipX, tipZ], width, strength }, playfieldMaterial) => {
-  const { world, RAPIER, table, ball } = physics;
+  const { world, RAPIER, table, ball, emit } = physics;
   const {
     minLaunchSpeed,
     maxLaunchSpeed,
@@ -58,7 +58,10 @@ export const Plunger = (physics, { tip: [tipX, tipZ], width, strength }, playfie
     return distance < readyDistance && Math.hypot(velocity.x, velocity.y, velocity.z) < readySpeed;
   }
 
-  const pull = () => { isPulling = true; }
+  const pull = () => {
+    isPulling = true;
+    emit('plunger', { pulling: true, position: ball.spawnPoint });
+  }
 
   const release = () => {
     if (isPulling === false) return;
@@ -72,6 +75,7 @@ export const Plunger = (physics, { tip: [tipX, tipZ], width, strength }, playfie
       }, true);
     }
     pullAmount = 0;
+    emit('plunger', { pulling: false, position: ball.spawnPoint });
   }
 
   // Called once per physics step.

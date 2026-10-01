@@ -59,6 +59,18 @@ export const TUNING = {
     angleVariation: Math.PI / 36
   },
 
+  audio: {
+    // Visual Pinball's ball speed units (VP units per 10 ms) for 1 m/s. The table's sound
+    // thresholds, volumes, and pitches are written in them. Raise to make hits louder and reach
+    // the harder rubber sound sooner.
+    vpSpeedPerMetrePerSecond: 18.5,
+    masterVolume: 0.8,
+    // Distance (m) at which a sound plays at its full volume; it fades beyond.
+    refDistance: 0.6,
+    // How many one-shot sounds can play at once.
+    voices: 12
+  },
+
   nudge: {
     // A shove moves the cabinet this far (m) and springs back over this many seconds.
     distance: 0.015,

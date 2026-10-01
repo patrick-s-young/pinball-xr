@@ -7,3 +7,6 @@ test/physics/.build/
 
 # Table visuals exported from the .vpx files by the importer
 public/tables/*.glb
+
+# Table sounds exported from the .vpx files by the importer
+public/tables/*/sounds/

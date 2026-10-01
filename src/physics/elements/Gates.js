@@ -8,7 +8,7 @@ const THICKNESS = 0.003;
 // Pinball; one coming back from the exit side is stopped. Deciding per contact (rather than
 // switching the wall on and off) keeps this correct with more than one ball on the table.
 export const Gates = (physics, gates) => {
-  const { table, ball, contactFilters } = physics;
+  const { table, ball, contactFilters, colliderInfo } = physics;
 
   const built = gates.map(({ name, center: [centerX, centerZ], length, height, tangent: [tangentX, tangentZ], allowedDirection: [allowedX, allowedZ], friction, restitution }) => {
     const half = length / 2;
@@ -17,6 +17,7 @@ export const Gates = (physics, gates) => {
       { thickness: THICKNESS, height, collisionGroups: COLLISION_GROUPS.table });
     collider.setFriction(friction);
     collider.setRestitution(restitution);
+    colliderInfo.set(collider.handle, { kind: 'gate', name });
 
     // Body handle -> whether that ball's centre is on the exit side, refreshed before each step.
     const pastGate = new Map();

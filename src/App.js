@@ -51,7 +51,8 @@ export const App = () => {
       definition: selectTable(DEFAULT_TABLE),
       placement: [x, y + HEIGHT_ABOVE_FLOOR, z],
       scene: three.scene.self,
-      renderer: three.renderer.self
+      renderer: three.renderer.self,
+      camera: three.camera.self
     });
     TouchControls({ uiParent, controls: game.controls });
     gamepads = Gamepads(game.controls);
