@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VIEW } from '@src/App.config';
 
 export function Renderer() {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true } );
@@ -7,6 +8,7 @@ export function Renderer() {
   // Table visuals use sRGB textures.
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = VIEW.lighting.exposure;
   renderer.xr.enabled = true;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;

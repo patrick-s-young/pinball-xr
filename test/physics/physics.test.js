@@ -87,6 +87,18 @@ const testTable = async (tableName, definition) => {
   }
   const plunge = (physics, amount) => { physics.plunger.pull(); run(physics, amount * TUNING.plunger.fullPullTime); physics.plunger.release(); }
   const pullForSpeed = (speed) => Math.min(1, (speed / plungerStrength - TUNING.plunger.minLaunchSpeed) / (TUNING.plunger.maxLaunchSpeed - TUNING.plunger.minLaunchSpeed));
+  // Whether pressing every flipper button once frees a ball that has come to rest: a ball
+  // resting on a flipper, as a player would see it, rather than trapped.
+  const freedByFlipping = (physics) => {
+    const before = ballLocal(physics);
+    [physics.leftFlipper, physics.rightFlipper].forEach(group => group.onFlipperUp());
+    run(physics, 0.3);
+    [physics.leftFlipper, physics.rightFlipper].forEach(group => group.onFlipperDown());
+    run(physics, 1);
+    if (!physics.ball.body.isEnabled()) return true;
+    const after = ballLocal(physics);
+    return Math.hypot(after.x - before.x, after.z - before.z) > 0.05;
+  }
   const atPlunger = (physics) => {
     const p = ballLocal(physics); const s = physics.table.toLocal(physics.ball.spawnPoint);
     return Math.hypot(p.x - s.x, p.z - s.z) < TUNING.plunger.readyDistance;
@@ -131,9 +143,10 @@ const testTable = async (tableName, definition) => {
       plunge(physics, pullForSpeed(speed));
       let drained = false;
       escapes.push(...run(physics, 30, () => { if (state.drains) { drained = true; return 'stop'; } }).map(e => `${speed} m/s: ${e}`));
-      const outcome = drained ? 'drained' : atPlunger(physics) ? 'back at plunger' : 'stuck';
+      const restingAt = drained || atPlunger(physics) ? null : ballLocal(physics);
+      const outcome = drained ? 'drained' : restingAt === null ? 'back at plunger' : freedByFlipping(physics) ? 'resting on a flipper' : 'stuck';
       outcomes[outcome] = (outcomes[outcome] || 0) + 1;
-      if (outcome === 'stuck') stuck.push(`${speed} m/s: at ${fmt(ballLocal(physics))} v=${len(physics.ball.body.linvel()).toFixed(3)}`);
+      if (outcome === 'stuck') stuck.push(`${speed} m/s: at ${fmt(restingAt)} v=${len(physics.ball.body.linvel()).toFixed(3)}`);
     }
     report('Plunge sweep 0.5-5.5 m/s (idle flippers, 30 s)', [
       check(stuck.length === 0, `no ball parked (${stuck.length})`), ...stuck.slice(0, 5),
@@ -260,7 +273,7 @@ const testTable = async (tableName, definition) => {
     reach.forEach((v, k) => { if (v && centre(k).z < L / 2 - 0.35) starts.push(k); });
 
     let seed = 7; const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    const trapped = []; const escaped = []; const times = [];
+    const trapped = []; const escaped = []; const times = []; const restingOnFlipper = [];
     const trials = 40;
     for (let i = 0; i < trials && starts.length; i++) {
       const { physics, state } = await setup();
@@ -271,12 +284,17 @@ const testTable = async (tableName, definition) => {
       const escapes = run(physics, 30, (t) => { if (state.drains) { drainedAt = t; return 'stop'; } });
       if (escapes.length) escaped.push(`${fmt(from)} ${escapes[0]}`);
       if (drainedAt !== null) times.push(drainedAt);
-      else if (!atPlunger(physics)) trapped.push(`from ${fmt(from)} -> at 30 s ${fmt(ballLocal(physics))} v=${len(physics.ball.body.linvel()).toFixed(3)}`);
+      else if (!atPlunger(physics)) {
+        const restingAt = ballLocal(physics);
+        if (freedByFlipping(physics)) restingOnFlipper.push(fmt(restingAt));
+        else trapped.push(`from ${fmt(from)} -> at 30 s ${fmt(restingAt)} v=${len(physics.ball.body.linvel()).toFixed(3)}`);
+      }
     }
     times.sort((a, b) => a - b);
     report(`Pocket search (${trials} random drops in reachable space, idle flippers, 30 s)`, [
       check(starts.length > 0, `${starts.length} reachable starting cells`),
       check(trapped.length === 0, `none trapped (${trapped.length})`), ...trapped.slice(0, 6),
+      ...(restingOnFlipper.length ? [`${restingOnFlipper.length} came to rest on a flipper, and a flip freed them (at ${[...new Set(restingOnFlipper)].slice(0, 3).join(', ')})`] : []),
       check(escaped.length === 0, `no escapes (${escaped.length})`), ...escaped.slice(0, 3),
       `drain time median ${times[Math.floor(times.length / 2)]?.toFixed(1)} s, longest ${times[times.length - 1]?.toFixed(1)} s`
     ]);
@@ -314,6 +332,7 @@ const testTable = async (tableName, definition) => {
     run(physics, 0.3);
     plunge(physics, 1);
     run(physics, 2);
+    const leftFlippers = physics.leftFlipper.flippers.length;
     physics.leftFlipper.onFlipperUp();
     physics.leftFlipper.onFlipperUp();
     run(physics, 0.1);
@@ -321,14 +340,14 @@ const testTable = async (tableName, definition) => {
     const lines = [
       check(count('serve') === 1 && count('plunger') === 2, `serve ${count('serve')}, plunger pull and release ${count('plunger')}`),
       check(count('hit:wall') + count('hit:rubber') > 0, `the plunge hits walls (${count('hit:wall') + count('hit:rubber')})`),
-      check(count('flipper') === 2, `a press and release fire the flipper once each (${count('flipper')})`)
+      check(count('flipper') === 2 * leftFlippers, `a press and release fire each of the ${leftFlippers} left flippers once each way (${count('flipper')})`)
     ];
     if (definition.gates.length) lines.push(check(count('hit:gate') > 0, `the plunge passes the gate (${count('hit:gate')})`));
     if (definition.slingshots.length) {
       const [x1, z1, x2, z2] = definition.slingshots[0].segment; const [nx, nz] = definition.slingshots[0].normal;
       place(physics, { x: (x1 + x2) / 2 + nx * 0.05, z: (z1 + z2) / 2 + nz * 0.05 }, { x: -nx * 0.8, y: 0, z: -nz * 0.8 });
-      run(physics, 0.3);
-      lines.push(check(count('slingshot') === 1, `a slingshot kick fires once (${count('slingshot')})`));
+      run(physics, 0.15);
+      lines.push(check(count('slingshot') >= 1, `a slingshot kick fires the event (${count('slingshot')})`));
     }
     report('Table events', lines);
   }

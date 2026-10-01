@@ -7,6 +7,7 @@ import { Keyboard } from './input/Keyboard';
 import { Gamepads } from './input/Gamepads';
 import { HEIGHT_ABOVE_FLOOR, DEFAULT_TABLE } from './App.config';
 import { selectTable } from './tables';
+import { LightingPanel } from '@debug/LightingPanel';
 
 // Desktop emulation: click the floor to place the table (or add ?autoplace to the page URL),
 // then play with the keyboard or a gamepad.
@@ -44,6 +45,7 @@ export const AppDev = () => {
       renderer: three.renderer.self,
       camera: three.camera.self
     });
+    if (new URLSearchParams(window.location.search).has('lighting')) LightingPanel({ scene: three.scene.self, renderer: three.renderer.self });
     Keyboard(game.controls);
     gamepads = Gamepads(game.controls);
     // Frame the table from in front of and above the player's end, like Visual Pinball's

@@ -58,7 +58,7 @@ flowchart TD
 
 - `src/tables/` holds the imported table definitions and chooses which to load.
 - `src/game/Game.js` runs one game on one table: builds the physics, serves balls, shows tilt messages, and creates the view.
-- `src/view/TableView.js` draws the table's Visual Pinball visuals and moves the flippers, plunger, and ball with the physics.
+- `src/view/TableView.js` draws the table's Visual Pinball visuals and moves the flippers, plunger, and ball with the physics, along with the ball and flipper shadows the table's script fakes. It lights the table with the table's own environment image, and `PlayfieldReflection.js` reflects what is on the playfield, as Visual Pinball does.
 - `src/audio/TableAudio.js` plays the table's sounds for physics events (flippers, plunger, slingshots, drain, ball release, hits, rolling) as positional audio from where they happen.
 - `src/physics/` is the physics. `createPhysics.js` builds the Rapier world from a table definition; `elements/` has one module per kind of table element (walls, slingshots, gates, drains, flippers, plunger, ball, playfield); `Nudge.js` handles nudging and tilt. Every tuning value is in `TUNING.js`.
 - `src/input/` has `Controls.js`, the actions every device drives, plus the keyboard and gamepad / WebXR controller inputs.
@@ -115,6 +115,8 @@ In emulation mode, click the debug floor to place the table (or open the page wi
 - In emulation mode, the overlay in the top-left shows FPS; click it to cycle to frame time, memory, and physics time per frame.
 - The table loaded is `DEFAULT_TABLE` in `src/App.config.js`. Add `?table=<name>` to the page URL to load another.
 - Add `?physics` to the page URL to draw the physics wireframe over the visuals. Tables without exported visuals always show the wireframe.
+- Playfield reflections: `VIEW.reflections` in `src/App.config.js` sets them for desktop (`all`: everything on the playfield) and WebXR (`ball`: only the ball, one extra draw call, to keep phones fast). `?reflections=all|ball|off` in the page URL overrides both.
+- Lighting: `VIEW.lighting` in `src/App.config.js` sets the exposure, the scene's lights, the environment image's strength, and the playfield reflection's strength. `?lighting` in the page URL (desktop) shows a panel for trying values live, including the glow of the table's playfield lights. The defaults are tuned for the spike table: its pale playfield hides the reflections and light glows at full brightness.
 
 ## Designing Tables in Visual Pinball
 
@@ -143,9 +145,12 @@ What is imported:
 | Kickers named `Drain` | Drain sensors |
 | Triggers | Recorded for later scoring (no physics effect) |
 | Everything visible: meshes, materials, textures, lights | A GLB drawn by three.js; flippers, plunger, and ball move with the physics |
+| Environment image, playfield and ball reflection strengths | The table's environment lights and is reflected by metal, plastic, and the ball; the playfield reflects what is on it |
+| Ball and flipper shadows faked in the script (ninuzzu's `BallShadow` array and `<shadow>.RotZ = <flipper>.CurrentAngle`) | The shadow meshes follow the ball and turn with their flippers |
+| Playfield lights (bulb position, falloff radius and power, colour, intensity), lights the script turns on through a collection (`For each xx in GI:xx.State = 1`), and lights a slingshot's script turns off while it kicks | Each light's outline glows from its bulb, fading out over the falloff radius as in Visual Pinball, and goes dark for the moment its slingshot kicks |
 | Sounds, and the collections that give elements hit sounds | The sounds Visual Pinball's standard script plays for each event, hit, and the rolling ball, with its speed thresholds, volumes, and pitches |
 
-Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; its sound calls are reproduced from Visual Pinball's standard script conventions (the importer reports any sound or collection it cannot map), and game rules will be written in JavaScript.
+Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Visual Pinball's screen-space reflections, ambient occlusion, and bloom are not reproduced. Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; its sound calls are reproduced from Visual Pinball's standard script conventions (the importer reports any sound or collection it cannot map), and game rules will be written in JavaScript.
 
 ## Built With
 

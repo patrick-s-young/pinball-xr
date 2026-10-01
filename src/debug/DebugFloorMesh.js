@@ -1,14 +1,22 @@
 import * as THREE from 'three';
 
+// The floor's image and how much floor one copy of it covers (metres): about 7.5 planks of
+// roughly 15 cm each.
+const FLOOR_IMAGE = '/models/floor/wood-floor.jpg';
+const FLOOR_TILE_SIZE = 1.2;
+
 export function DebugFloorMesh({
   position = [0, 0, 0],
   size = [10, 10]
 }) {
   const loader = new THREE.TextureLoader();
-  const texture = loader.load('/models/floor/checkerboard.png');
+  const texture = loader.load(FLOOR_IMAGE);
+  texture.encoding = THREE.sRGBEncoding;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.x = texture.repeat.y = 3;
+  texture.repeat.set(size[0] / FLOOR_TILE_SIZE, size[1] / FLOOR_TILE_SIZE);
+  // Keeps the boards sharp where the floor is seen at a low angle.
+  texture.anisotropy = 8;
   let body;
 
   const material = new THREE.MeshBasicMaterial({
