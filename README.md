@@ -16,7 +16,7 @@ I am initially developing in vanilla Javascript - along with [Rapier](https://ra
 
 
 ### Progress
-I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, physics and visuals: the physics runs on Rapier, and the table is drawn with its own Visual Pinball meshes, materials, and textures and plays its own sounds. In addition to the WebXR mode, there is a desktop browser 'emulation' mode that enables faster iteration when developing non-WebXR functionality.
+I am establishing a baseline for the pinball game's physics behavior in WebXR. Tables are designed in [Visual Pinball X](https://github.com/vpinball/vpinball) and imported, physics and visuals: the physics runs on Rapier, and the table is drawn with its own Visual Pinball meshes, materials, and textures and plays its own sounds. For now, development focuses on the desktop version, to build the ideal game experience first; WebXR is on hold and will be revisited to port that experience to XR-enabled browsers.
 
 ## Application Architecture
 
@@ -25,7 +25,7 @@ The application has two entry points that share the same game:
 - `yarn start` uses `src/index.js` and `src/App.js` for the WebXR flow.
 - `yarn dev` uses `src/index.dev.js` and `src/AppDev.js` for desktop emulation.
 
-Webpack selects the entry point from the `development` environment flag. Both apps place the table (WebXR by AR hit testing and a screen tap, emulation by a raycast from the pointer onto a debug floor), then start the same game and connect their own input devices to it.
+Webpack selects the entry point from the `development` environment flag. Both apps place the table (WebXR by AR hit testing and a screen tap; the desktop app places it on the floor straight away), then start the same game and connect their own input devices to it.
 
 ```mermaid
 flowchart TD
@@ -34,7 +34,7 @@ flowchart TD
     VPX -->|"npm run import-table"| Sounds["public/tables/*/sounds (sounds)"]
     Start["Browser loads bundle"] --> Entry{"Entry point"}
     Entry -->|"yarn start"| XRApp["App: WebXR"]
-    Entry -->|"yarn dev"| DevApp["AppDev: desktop emulation"]
+    Entry -->|"yarn dev"| DevApp["AppDev: desktop"]
     XRApp --> Placement["Place the table"]
     DevApp --> Placement
     Placement --> Game["createGame"]
@@ -50,6 +50,7 @@ flowchart TD
     Visuals --> View["TableView: table visuals, moved by the physics"]
     Loop --> View
     Sounds --> Audio["TableAudio: table sounds for physics events"]
+    Loop --> Water["WaterView (desktop): water from the tank, simulated in a worker"]
     Loop --> Audio
     Loop --> Render["renderer.render"]
 ```
@@ -59,6 +60,8 @@ flowchart TD
 - `src/tables/` holds the imported table definitions and chooses which to load.
 - `src/game/Game.js` runs one game on one table: builds the physics, serves balls, shows tilt messages, and creates the view.
 - `src/view/TableView.js` draws the table's Visual Pinball visuals and moves the flippers, plunger, and ball with the physics, along with the ball and flipper shadows the table's script fakes. It lights the table with the table's own environment image, and `PlayfieldReflection.js` reflects what is on the playfield, as Visual Pinball does.
+- `src/water3d/` is the 3D water prototype (`?water=3d`): `Water3DView.js` runs it and draws it with WebGPU over the table, and `shaders.js` holds its simulation and rendering shaders. The table's layout for both kinds of water comes from `src/water/tableRaster.js`.
+- `src/water/` is the water released from a tank above the top of the table: `WaterSimulation.js` is a shallow-water simulation on a grid over the playfield, run in a worker (`water.worker.js`), and `WaterView.js` draws it. Desktop only.
 - `src/audio/TableAudio.js` plays the table's sounds for physics events (flippers, plunger, slingshots, drain, ball release, hits, rolling) as positional audio from where they happen.
 - `src/physics/` is the physics. `createPhysics.js` builds the Rapier world from a table definition; `elements/` has one module per kind of table element (walls, slingshots, gates, drains, flippers, plunger, ball, playfield); `Nudge.js` handles nudging and tilt. Every tuning value is in `TUNING.js`.
 - `src/input/` has `Controls.js`, the actions every device drives, plus the keyboard and gamepad / WebXR controller inputs.
@@ -77,6 +80,8 @@ flowchart TD
 - **Flippers.** Each is a dynamic body on a revolute joint whose limits are the rest and up stops, driven by a solenoid model each physics step: full coil torque on the up stroke, weaker end-of-stroke torque near the up stop, and a return spring. Visual Pinball's strength, mass, return strength, and end-of-stroke settings scale the runtime's values. Because the flipper has mass and finite torque, a hard shot can push a raised flipper back, and the ball slows the flipper as it is struck.
 - **Materials.** The ball uses coefficients of 1 with the `Min` combine rule, so each contact takes the friction and elasticity Visual Pinball gives the surface it touches.
 - **Slingshots.** A sensor in front of each kicking face. They fire only when the ball moves into the face above a threshold speed, with strength scaled by Visual Pinball's slingshot force, and each kick varies slightly, as on a real table, so the ball cannot settle into an endless bounce loop.
+- **Bumpers.** A solid cylinder each. As in Visual Pinball, a ball that hits one faster than its threshold bounces off and then gets the bumper's force added to its speed, straight out from the centre. The ring drops and springs back when it fires. Tilting switches bumpers off.
+- **Spinners.** The ball passes through the plate, as in Visual Pinball, and sets it spinning in proportion to its speed. The spin slows by the spinner's damping, and the plate settles hanging down. Each full turn fires a `spinner` event, which plays its sound.
 - **Gates.** A one-way gate is a thin wall that only acts on a ball already past it, decided per contact by a Rapier contact filter. A ball passes the allowed way at nearly full speed, as in Visual Pinball, and is stopped the other way.
 - **Plunger.** A served ball waits at rest against the plunger tip. Holding the plunger builds pull over one second, and releasing launches the ball up the lane at 0.5-5.5 m/s depending on the pull; it only fires when the ball is resting at the plunger. A weak shot rolls back for another try.
 - **Nudge.** A nudge shoves the whole cabinet 15 mm and lets it spring back over 0.1 s; the flippers move with it. As on a real table, the ball is affected only through contact: a nudge knocks a ball off a wall, post, or flipper it is touching, and does almost nothing to a ball rolling freely.
@@ -100,7 +105,7 @@ yarn test:physics (headless physics checks)
 ```
 The equivalent `npm install`, `npm start`, `npm run dev`, and `npm run test:physics` commands also work.
 
-In emulation mode, click the debug floor to place the table (or open the page with `?autoplace`). Controls follow Visual Pinball's defaults:
+The desktop app places the table on the floor as the page loads. Controls follow Visual Pinball's defaults:
 
 | Action | Keyboard | Gamepad | WebXR controllers | WebXR touch |
 |---|---|---|---|---|
@@ -116,7 +121,31 @@ In emulation mode, click the debug floor to place the table (or open the page wi
 - The table loaded is `DEFAULT_TABLE` in `src/App.config.js`. Add `?table=<name>` to the page URL to load another.
 - Add `?physics` to the page URL to draw the physics wireframe over the visuals. Tables without exported visuals always show the wireframe.
 - Playfield reflections: `VIEW.reflections` in `src/App.config.js` sets them for desktop (`all`: everything on the playfield) and WebXR (`ball`: only the ball, one extra draw call, to keep phones fast). `?reflections=all|ball|off` in the page URL overrides both.
+- Water: five seconds after the first ball is launched, the front of a hidden tank on top of the top rail slides up and water pours out onto the playfield, flows down around the bumpers and everything else, and drains away past the flippers. It is purely visual: the ball plays on as normal. `WATER` in `src/App.config.js` sets the delay, the tank's size, and the gap; `?water=now` in the page URL opens the tank at once, `?water=off` turns the water off.
 - Lighting: `VIEW.lighting` in `src/App.config.js` sets the exposure, the scene's lights, the environment image's strength, and the playfield reflection's strength. `?lighting` in the page URL (desktop) shows a panel for trying values live, including the glow of the table's playfield lights. The defaults are tuned for the spike table: its pale playfield hides the reflections and light glows at full brightness.
+
+## Water
+
+The water is a visual effect: it never touches the ball. It is simulated as shallow water, because on a pinball playfield water is a thin sheet:
+
+- **Grid.** The playfield is divided into 5 mm cells, each holding a water depth, with water velocities on the faces between cells. Each step, the faces speed up from differences in water level and the playfield's slope, and slow from friction with the playfield (thin water more than deep). Water then moves across each face from the cell upstream.
+- **Obstacles.** Walls, rubbers, bumpers, and the flippers (as they move) block the water. Space the ball can never reach, such as the corners outside the top arch, counts as solid, so no water collects there.
+- **Tank.** The tank sits on the top rail, as wide as the playfield inside the rails. When its panel opens, water leaves the gap at the speed its depth gives it and falls from the top of the rail onto the playfield. A full tank throws water well down the table, over the top guide walls and among the bumpers. As it empties, the water lands closer to the rail.
+- **Drain.** Below the flippers the water drains away, faster the closer it gets to the drain. Puddles left standing in corners slowly evaporate.
+- **Drawing.** The surface is a grid mesh raised by each cell's depth and lit like the rest of the table. It is bluer and more opaque where deeper, nearly clear where it is a thin film, and foamy where it runs fast. Ripples drift with the local flow.
+- **Cost.** The simulation runs in a Web Worker, so the game and rendering never wait for it. It takes about 5 ms per frame on average on a desktop CPU, so WebGPU is not needed. If a worker cannot start, it runs on the main thread instead.
+
+### 3D water (prototype)
+
+`?water=3d` in the page URL (or `?water=3d-now` to open the tank at once) swaps the flat water for true 3D water, in browsers with WebGPU. It splashes, throws droplets, and climbs over walls. It is adapted from [WebGPU-Ocean](https://github.com/matsuoka-601/WebGPU-Ocean) by matsuoka-601 (MIT License, see `src/water3d/LICENSE-WebGPU-Ocean`):
+
+- **Simulation.** The water is tens of thousands of particles in an MLS-MPM fluid simulation on the GPU, on an 8 mm grid over the table, with the table's slope as gravity. Walls, bumpers, and the moving flippers are obstacles. The tank pours particles from its gap at the rate and speed its level gives, and particles that reach the drain or the plunger slot are removed.
+- **Drawing.** The water is drawn with WebGPU on a transparent canvas over the table's own canvas, using the same camera. Each particle is drawn as a sphere, and the result is smoothed into a surface (screen-space fluid rendering). The surface reflects the table's environment and bends the table's own image seen through it. Stand-ins for the walls, bumpers, flippers, and ball hide water behind them, and water past the flipper tips goes out of sight under the apron.
+- **Settings.** `WATER3D` in `src/App.config.js` sets the grid, the fluid (stiffness, rest density, viscosity, and floor friction, which lets water spread out instead of running in rivers), the drawing resolution, and the look. With `?water=3d`, a panel on the left has sliders for these, the water's gravity, and the amount of water, plus a button to pour again. It also shows the particle count, steps per frame, and grid size.
+
+If WebGPU is not available, the game falls back to the flat water.
+
+`npm run test:physics` also checks the water on every table with visuals: the tank empties, the water reaches every bumper and gets past the flippers, it all drains away, and none is lost or created.
 
 ## Designing Tables in Visual Pinball
 
@@ -141,6 +170,8 @@ What is imported:
 | Slingshot segments of walls | Slingshot kickers, scaled by the wall's slingshot force |
 | Flippers | Position, length, radii, angles, strength, mass, return strength, and end-of-stroke torque |
 | One-way gates | One-way walls in the gate's direction |
+| Bumpers | Position, radius, height, force, threshold, scatter, and ring animation |
+| Spinners | Position, length, axle height, direction, damping, and stops |
 | Plunger | Serve position and strength |
 | Kickers named `Drain` | Drain sensors |
 | Triggers | Recorded for later scoring (no physics effect) |
@@ -148,9 +179,9 @@ What is imported:
 | Environment image, playfield and ball reflection strengths | The table's environment lights and is reflected by metal, plastic, and the ball; the playfield reflects what is on it |
 | Ball and flipper shadows faked in the script (ninuzzu's `BallShadow` array and `<shadow>.RotZ = <flipper>.CurrentAngle`) | The shadow meshes follow the ball and turn with their flippers |
 | Playfield lights (bulb position, falloff radius and power, colour, intensity), lights the script turns on through a collection (`For each xx in GI:xx.State = 1`), and lights a slingshot's script turns off while it kicks | Each light's outline glows from its bulb, fading out over the falloff radius as in Visual Pinball, and goes dark for the moment its slingshot kicks |
-| Sounds, and the collections that give elements hit sounds | The sounds Visual Pinball's standard script plays for each event, hit, and the rolling ball, with its speed thresholds, volumes, and pitches |
+| Sounds, and the collections that give elements hit sounds | The sounds Visual Pinball's standard script plays for each event, hit, and the rolling ball, with its speed thresholds, volumes, and pitches. Bumpers and spinners play the sound their script sub plays (`Sub Bumper001_Hit`), or the standard script's if the script has no sub named after them |
 
-Not imported into the physics yet: ramps, collidable 3D primitives, bumpers, spinners, and targets (they are drawn, but the ball does not interact with them). Visual Pinball's screen-space reflections, ambient occlusion, and bloom are not reproduced. Gates and slingshots are drawn but not yet animated. The table script (VBScript) does not run; its sound calls are reproduced from Visual Pinball's standard script conventions (the importer reports any sound or collection it cannot map), and game rules will be written in JavaScript.
+Not imported into the physics yet: ramps, collidable 3D primitives, and targets (they are drawn, but the ball does not interact with them). Visual Pinball's screen-space reflections, ambient occlusion, and bloom are not reproduced. Gates and slingshots are drawn but not yet animated, and bumper skirts do not tilt. The table script (VBScript) does not run; its sound calls are reproduced from Visual Pinball's standard script conventions (the importer reports any sound or collection it cannot map), and game rules will be written in JavaScript.
 
 ## Built With
 

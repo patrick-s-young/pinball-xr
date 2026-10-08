@@ -9,35 +9,23 @@ import { HEIGHT_ABOVE_FLOOR, DEFAULT_TABLE } from './App.config';
 import { selectTable } from './tables';
 import { LightingPanel } from '@debug/LightingPanel';
 
-// Desktop emulation: click the floor to place the table (or add ?autoplace to the page URL),
-// then play with the keyboard or a gamepad.
+// Where the desktop app places the table's playfield centre (x, z on the floor).
+const TABLE_POSITION = { x: 0, z: 0 };
+
+// The desktop app: the table is placed on the floor straight away; play with the keyboard or a
+// gamepad. The orbit controls move the camera.
 export const AppDev = () => {
   const clock = new THREE.Clock();
   const stats = PerformanceStats();
   const three = InitThree({ isDebugMode: true });
   const meshes = InitMeshes({ isDebugMode: true });
-  const canvas = three.renderer.domElement;
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
   let game = null;
   let gamepads = null;
 
-  three.scene.add([meshes.reticle.mesh, meshes.debugFloor.mesh]);
-  meshes.reticle.visible = true;
+  three.scene.add([meshes.debugFloor.mesh]);
 
-  const onPointerMove = (event) => {
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(pointer, three.camera.self);
-    const [hit] = raycaster.intersectObject(meshes.debugFloor.mesh);
-    if (hit) meshes.reticle.setPosition(hit.point);
-  }
-
-  const onClick = async () => {
-    canvas.removeEventListener('pointermove', onPointerMove);
-    canvas.removeEventListener('click', onClick);
-    const { x, z } = new THREE.Vector3().setFromMatrixPosition(meshes.reticle.mesh.matrix);
-    meshes.reticle.visible = false;
+  const placeTable = async () => {
+    const { x, z } = TABLE_POSITION;
     game = await createGame({
       definition: selectTable(DEFAULT_TABLE),
       placement: [x, HEIGHT_ABOVE_FLOOR, z],
@@ -54,10 +42,7 @@ export const AppDev = () => {
     three.camera.self.position.set(x, HEIGHT_ABOVE_FLOOR + 0.9, z + 0.95);
   }
 
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('click', onClick);
-  // ?autoplace skips the click and places the table under the camera.
-  if (new URLSearchParams(window.location.search).has('autoplace')) onClick();
+  placeTable();
 
   const animate = () => {
     stats.begin();
@@ -66,11 +51,10 @@ export const AppDev = () => {
       gamepads.poll();
       stats.measurePhysics(() => game.physicsUpdate(dt));
       game.viewUpdate();
-    } else {
-      meshes.reticle.updateMixer(dt);
     }
     three.orbitControls.update();
     three.renderer.render(three.scene.self, three.camera.self);
+    game?.afterRender();
     stats.end();
     requestAnimationFrame(animate);
   }

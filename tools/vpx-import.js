@@ -76,6 +76,17 @@ const STANDARD_HIT_SOUNDS = {
   Gates: [{ minSpeed: 0, sounds: ['gate4'] }]
 };
 const slingshotSounds = (name) => /left/i.test(name) ? ['left_slingshot'] : /right/i.test(name) ? ['right_slingshot'] : [];
+// The standard script's bumpers play fx_bumper1 to fx_bumper4 in turn; its spinners fx_spinner.
+const standardBumperSound = (index) => `fx_bumper${index % 4 + 1}`;
+const STANDARD_SPINNER_SOUND = 'fx_spinner';
+
+// The sound a script subroutine plays (Sub Bumper001_Hit ... PlaySoundAt SoundFX("fx_bumper1", ...)),
+// lower case, or null if the script has no such sub or it plays no sound.
+const scriptSound = (script, sub) => {
+  const body = script.match(new RegExp(`^\\s*Sub\\s+${sub}\\b([\\s\\S]*?)^\\s*End\\s+Sub`, 'im'));
+  const sound = body && body[1].match(/PlaySound\w*\s*\(?\s*(?:SoundFX\s*\(\s*)?"([^"]+)"/i);
+  return sound ? sound[1].toLowerCase() : null;
+}
 
 const extractSounds = (vpxPath) => {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vpx-sounds-'));
@@ -85,7 +96,7 @@ const extractSounds = (vpxPath) => {
 
 // Maps the table's events and elements to its sounds, copies the sounds used to outputDir, and
 // returns the definition's `sounds` section plus a report of what could not be matched.
-const importSounds = (vpxPath, definition, collections, outputDir, url) => {
+const importSounds = (vpxPath, definition, { collections, script }, outputDir, url) => {
   const extractDir = extractSounds(vpxPath);
   try {
     // Lower-case sound name -> file in the extract. A table without sounds has no sounds folder.
@@ -112,6 +123,17 @@ const importSounds = (vpxPath, definition, collections, outputDir, url) => {
       if (found.length) slingshots[name] = found;
     });
 
+    // Bumpers and spinners play what the table's script plays for them, or the standard script's
+    // sound if the script has no sub for them (its subs are named after the elements).
+    const fromStandard = [];
+    const bySound = (elements, sub, standard) => Object.fromEntries(elements.map((element, i) => {
+      const fromScript = scriptSound(script, `${element.name}_${sub}`);
+      if (fromScript === null) fromStandard.push(element.name);
+      return [element.name, pick([fromScript ?? standard(i)])];
+    }).filter(([, found]) => found.length));
+    const bumpers = bySound(definition.bumpers, 'Hit', standardBumperSound);
+    const spinners = bySound(definition.spinners, 'Spin', () => STANDARD_SPINNER_SOUND);
+
     // Element name -> collection, for collections that fire hit events and have a known sound.
     const hits = {};
     const hitProfiles = {};
@@ -134,8 +156,8 @@ const importSounds = (vpxPath, definition, collections, outputDir, url) => {
     });
 
     return {
-      sounds: { files, events, slingshots, hits, hitProfiles },
-      report: { used: used.size, available: available.size, missing: [...missing], unknownCollections }
+      sounds: { files, events, slingshots, bumpers, spinners, hits, hitProfiles },
+      report: { used: used.size, available: available.size, missing: [...missing], unknownCollections, fromStandard }
     };
   } finally {
     fs.rmSync(extractDir, { recursive: true, force: true });
@@ -604,6 +626,54 @@ const importTrigger = (trigger, convert) => ({
   }
 });
 
+// Visual Pinball's speeds (bumper force and threshold) are in VP units per 10 ms; this converts
+// them to m/s.
+const metresPerSecond = (vpSpeed) => vpSpeed * METRES_PER_VPU * 100;
+
+const importBumper = (bumper, convert) => {
+  if (bumper.is_collidable === false) return { skip: 'not collidable' };
+  return {
+    bumper: {
+      name: bumper.name,
+      center: roundPoint(convert.point(bumper.center)),
+      radius: round(convert.length(bumper.radius)),
+      height: round(convert.length(bumper.height_scale)),
+      // Visual Pinball's bumper: a ball that hits faster than the threshold gets the force added
+      // to its speed, straight out from the centre. Both in m/s.
+      kickSpeed: round(metresPerSecond(bumper.force)),
+      threshold: round(metresPerSecond(bumper.threshold)),
+      // Random change to the kick's direction (radians).
+      scatter: round(bumper.scatter * Math.PI / 180),
+      // How far (m) and how fast (m/s) the ring drops when the bumper fires, as Visual Pinball
+      // animates it (ring speed is in VP units per millisecond).
+      ringDrop: round(convert.length(bumper.ring_drop_offset + bumper.height_scale / 2)),
+      ringSpeed: round(convert.length(bumper.ring_speed) * 1000)
+    }
+  };
+}
+
+const importSpinner = (spinner, convert) => {
+  const radians = spinner.rotation * Math.PI / 180;
+  return {
+    spinner: {
+      name: spinner.name,
+      center: roundPoint(convert.point(spinner.center)),
+      length: round(convert.length(spinner.length)),
+      // Axle height.
+      height: round(convert.length(spinner.height)),
+      // Along the axle, and the way the ball passes through at rotation 0 (straight up the table).
+      tangent: roundPoint([Math.cos(radians), Math.sin(radians)]),
+      normal: roundPoint(vpDirection(spinner.rotation)),
+      // Fraction of the plate's spin kept per 10 ms (Visual Pinball's damping).
+      damping: spinner.damping,
+      // Stops (radians); equal means the plate turns freely.
+      angleMin: round(spinner.angle_min * Math.PI / 180),
+      angleMax: round(spinner.angle_max * Math.PI / 180),
+      elasticity: spinner.elasticity
+    }
+  };
+}
+
 const IMPORTERS = {
   Wall: importWall,
   Rubber: importRubber,
@@ -611,14 +681,14 @@ const IMPORTERS = {
   Gate: importGate,
   Plunger: importPlunger,
   Kicker: importKicker,
-  Trigger: importTrigger
+  Trigger: importTrigger,
+  Bumper: importBumper,
+  Spinner: importSpinner
 };
 
 const SKIP_REASONS = {
   Ramp: (ramp) => ramp.is_collidable ? 'ramps are not supported yet' : 'not collidable',
   Primitive: (primitive) => primitive.is_collidable && !primitive.is_toy ? 'collidable meshes are not supported yet' : 'not collidable',
-  Bumper: () => 'bumpers are not supported yet',
-  Spinner: () => 'spinners are not supported yet',
   HitTarget: () => 'targets are not supported yet'
 };
 
@@ -645,6 +715,8 @@ const buildDefinition = ({ gamedata, info, items }, sourceName) => {
     slingshots: [],
     flippers: [],
     gates: [],
+    bumpers: [],
+    spinners: [],
     plunger: null,
     drains: [],
     triggers: [],
@@ -666,6 +738,8 @@ const buildDefinition = ({ gamedata, info, items }, sourceName) => {
     if (result.slingshots) definition.slingshots.push(...result.slingshots);
     if (result.flipper) definition.flippers.push(result.flipper);
     if (result.gate) definition.gates.push(result.gate);
+    if (result.bumper) definition.bumpers.push(result.bumper);
+    if (result.spinner) definition.spinners.push(result.spinner);
     if (result.plunger) definition.plunger = result.plunger;
     if (result.drain) definition.drains.push(result.drain);
     if (result.trigger) definition.triggers.push(result.trigger);
@@ -716,7 +790,7 @@ const main = () => {
     if (args.includes('--no-sounds') === false) {
       const soundsDir = path.join(__dirname, '..', 'public', 'tables', sourceName, 'sounds');
       fs.rmSync(soundsDir, { recursive: true, force: true });
-      const { sounds, report } = importSounds(vpxPath, definition, table.collections, soundsDir, `tables/${sourceName}/sounds`);
+      const { sounds, report } = importSounds(vpxPath, definition, table, soundsDir, `tables/${sourceName}/sounds`);
       if (report.available === 0) {
         fs.rmSync(soundsDir, { recursive: true, force: true });
         console.log('The table has no sounds.');
@@ -725,6 +799,7 @@ const main = () => {
         console.log(`Wrote ${path.relative(process.cwd(), soundsDir)} (${report.used} of the table's ${report.available} sounds)`);
         if (report.missing.length) console.log(`  the table has no ${report.missing.join(', ')}; those events are silent`);
         if (report.unknownCollections.length) console.log(`  collections with hit events but no standard sound: ${report.unknownCollections.join(', ')}`);
+        if (report.fromStandard.length) console.log(`  the script has no sound sub for ${report.fromStandard.join(', ')}; they play the standard script's sounds`);
       }
     }
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -732,7 +807,8 @@ const main = () => {
     const vertices = definition.walls.reduce((sum, wall) => sum + wall.loops.reduce((s, loop) => s + loop.length, 0), 0);
     console.log(`Wrote ${path.relative(process.cwd(), outputPath)}`);
     console.log(`  ${definition.walls.length} walls and rubbers (${vertices} outline points), ${definition.slingshots.length} slingshots, ` +
-      `${definition.flippers.length} flippers, ${definition.gates.length} gates, ${definition.drains.length} drains, ${definition.triggers.length} triggers`);
+      `${definition.flippers.length} flippers, ${definition.gates.length} gates, ${definition.bumpers.length} bumpers, ${definition.spinners.length} spinners, ` +
+      `${definition.drains.length} drains, ${definition.triggers.length} triggers`);
     definition.warnings.forEach(warning => console.log(`  warning: ${warning}`));
     // Skipped elements, grouped by reason (the full list is in the definition's `skipped`).
     const byReason = {};

@@ -5,7 +5,7 @@ import { withMaterial } from '../colliders';
 // from the playfield up to the wall's height, plus a top so a ball that lands on it does not drop
 // inside. Loops come from the importer wound so the faces point away from the solid, which lets
 // FIX_INTERNAL_EDGES stop the ball catching on the seams between faces.
-const wallMesh = ({ loops, height, cap }) => {
+export const wallMesh = ({ loops, height, cap }) => {
   const vertices = [];
   const indices = [];
   let first = 0;

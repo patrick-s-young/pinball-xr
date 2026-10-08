@@ -91,10 +91,11 @@ const reflectionMode = (renderer) => {
 }
 
 // Draws the table with its own Visual Pinball visuals (exported by the importer as a GLB) and
-// keeps the moving parts in step with the physics: flippers, plunger, the ball, and the shadows
+// keeps the moving parts in step with the physics: flippers, plunger, bumper rings, spinner plates,
+// the ball, and the shadows
 // the table's script fakes for them. The playfield reflects what is on it, as in Visual Pinball.
 export const TableView = async ({ scene, renderer, physics }) => {
-  const { definition, table, ball, flippers, plunger } = physics;
+  const { definition, table, ball, flippers, plunger, spinners = [] } = physics;
   const { width, length } = definition.playfield;
   const { environment, reflections = { playfield: 0, ball: 0 }, shadows = { ballShadows: [], flipperShadows: {} }, lights = [] } = definition.visuals;
   const gltf = await new GLTFLoader().loadAsync(definition.visuals.url);
@@ -161,6 +162,26 @@ export const TableView = async ({ scene, renderer, physics }) => {
     node.material = lightGlowMaterial({ ...light, center, falloff });
     return { light, node, brightness: light.on ? 1 : 0, offUntil: 0 };
   }).filter(Boolean);
+  // Bumper rings drop when the bumper fires and spring back, as Visual Pinball animates them.
+  const ringViews = (definition.bumpers || []).map(bumper => {
+    const node = model.getObjectByName(`${bumper.name}Ring`);
+    return node && { bumper, node, rest: node.position.y, offset: 0, dropping: false };
+  }).filter(Boolean);
+  physics.events.addEventListener('bumper', ({ detail }) => {
+    const view = ringViews.find(({ bumper }) => bumper.name === detail.name);
+    if (view) view.dropping = true;
+  });
+
+  // Spinner plates turn about their axle (the spinner's tangent, in the plate's parent's frame).
+  const spinnerViews = spinners.map(spinner => {
+    const node = model.getObjectByName(`${spinner.name}Plate`);
+    if (!node) return null;
+    const { tangent: [tangentX, tangentZ] } = definition.spinners.find(s => s.name === spinner.name);
+    const parentRotation = node.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const axis = new THREE.Vector3(tangentX, 0, tangentZ).applyQuaternion(model.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(parentRotation);
+    return { spinner, node, axis, rest: node.quaternion.clone(), turn: new THREE.Quaternion() };
+  }).filter(Boolean);
+
   // Lights a slingshot's script turns off for a moment when it kicks.
   physics.events.addEventListener('slingshot', ({ detail }) => {
     lightViews.forEach(view => {
@@ -207,8 +228,23 @@ export const TableView = async ({ scene, renderer, physics }) => {
     plungerParts.forEach((part, i) => { part.position.z = plungerBase[i] + pull; });
 
     const now = performance.now() / 1000;
-    const fade = Math.min(1, (now - lastUpdate) / LIGHT_FADE_SECONDS);
+    const elapsed = Math.min(0.1, now - lastUpdate);
+    const fade = Math.min(1, elapsed / LIGHT_FADE_SECONDS);
     lastUpdate = now;
+
+    ringViews.forEach(view => {
+      const { ringDrop, ringSpeed } = view.bumper;
+      if (view.dropping) {
+        view.offset = Math.min(ringDrop, view.offset + ringSpeed * elapsed);
+        if (view.offset >= ringDrop) view.dropping = false;
+      } else {
+        view.offset = Math.max(0, view.offset - ringSpeed * elapsed);
+      }
+      view.node.position.y = view.rest - view.offset;
+    });
+    spinnerViews.forEach(({ spinner, node, axis, rest, turn }) => {
+      node.quaternion.copy(turn.setFromAxisAngle(axis, spinner.getAngle())).multiply(rest);
+    });
     lightViews.forEach(view => {
       const target = view.light.on && now >= view.offUntil ? 1 : 0;
       view.brightness += (target - view.brightness) * fade;

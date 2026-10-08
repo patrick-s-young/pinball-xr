@@ -59,6 +59,20 @@ export const TUNING = {
     angleVariation: Math.PI / 36
   },
 
+  bumper: {
+    // Bounce and grip of the bumper's body. Visual Pinball has no per-table setting for them; its
+    // kick, threshold, and scatter come from the table.
+    restitution: 0.3,
+    friction: 0.3
+  },
+
+  spinner: {
+    // Depth (m) of the sensor across the plate that detects the ball.
+    sensorThickness: 0.004,
+    // Pull (rad/s²) that brings a slowing plate to rest hanging down, as in Visual Pinball.
+    gravity: 25
+  },
+
   audio: {
     // Visual Pinball's ball speed units (VP units per 10 ms) for 1 m/s. The table's sound
     // thresholds, volumes, and pitches are written in them. Raise to make hits louder and reach
