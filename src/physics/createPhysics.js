@@ -10,6 +10,8 @@ import { Playfield } from './elements/Playfield';
 import { Walls } from './elements/Walls';
 import { Slingshots } from './elements/Slingshots';
 import { Gates } from './elements/Gates';
+import { Bumpers } from './elements/Bumpers';
+import { Spinners } from './elements/Spinners';
 import { Drains } from './elements/Drains';
 import { Ball } from './elements/Ball';
 import { Flipper } from './elements/Flipper';
@@ -58,6 +60,8 @@ export const createPhysics = async ({ definition, placement }) => {
   const walls = Walls(physics, definition.walls);
   const slingshots = Slingshots(physics, definition.slingshots);
   const gates = Gates(physics, definition.gates);
+  const bumpers = Bumpers(physics, definition.bumpers || []);
+  const spinners = Spinners(physics, definition.spinners || []);
   Drains(physics, definition.drains, () => emit('drain', { position: ball.body.translation() }));
   const plunger = Plunger(physics, plungerDefinition, playfieldMaterial);
   const flippers = definition.flippers.map(flipper => Flipper(physics, flipper));
@@ -83,6 +87,7 @@ export const createPhysics = async ({ definition, placement }) => {
       ball.beforeStep(dt);
       plunger.update(dt);
       flippers.forEach(flipper => flipper.update(dt));
+      spinners.update(dt);
       gates.beforeStep();
       world.step(collisionEvents.eventQueue, contactFilters.hooks);
       collisionEvents.dispatch();
@@ -95,14 +100,17 @@ export const createPhysics = async ({ definition, placement }) => {
     walls,
     slingshots,
     gates: gates.gates,
+    bumpers,
+    spinners: spinners.spinners,
     plunger,
     nudge,
     flippers,
     leftFlipper: flipperGroup(flippers.filter(flipper => flipper.side === 'left')),
     rightFlipper: flipperGroup(flippers.filter(flipper => flipper.side === 'right')),
     // Table events, each a CustomEvent whose detail includes a world `position`:
-    //   flipper { name, side, up }, slingshot { name }, plunger { pulling }, drain, serve,
-    //   hit { kind: 'wall' | 'rubber' | 'flipper' | 'gate' | 'floor', name, speed, normalSpeed }.
+    //   flipper { name, side, up }, slingshot { name }, bumper { name } (it fired),
+    //   spinner { name } (a full turn), plunger { pulling, launched (on release) }, drain, serve,
+    //   hit { kind: 'wall' | 'rubber' | 'flipper' | 'gate' | 'bumper' | 'floor', name, speed, normalSpeed }.
     events,
     // Puts a ball at rest against the plunger.
     serveBall: () => {

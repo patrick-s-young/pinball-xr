@@ -66,7 +66,8 @@ export const Plunger = (physics, { tip: [tipX, tipZ], width, strength }, playfie
   const release = () => {
     if (isPulling === false) return;
     isPulling = false;
-    if (isBallReady()) {
+    const launched = isBallReady();
+    if (launched) {
       const speed = getLaunchSpeed(pullAmount);
       ball.body.setLinvel({
         x: launchDirection.x * speed,
@@ -75,7 +76,7 @@ export const Plunger = (physics, { tip: [tipX, tipZ], width, strength }, playfie
       }, true);
     }
     pullAmount = 0;
-    emit('plunger', { pulling: false, position: ball.spawnPoint });
+    emit('plunger', { pulling: false, launched, position: ball.spawnPoint });
   }
 
   // Called once per physics step.

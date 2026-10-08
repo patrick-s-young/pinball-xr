@@ -4,6 +4,8 @@
 import { createPhysics } from '@physics/createPhysics';
 import { TUNING } from '@physics/TUNING';
 import { TABLES } from '@src/tables';
+import { WATER } from '@src/App.config';
+import { WaterSimulation } from '@src/water/WaterSimulation';
 
 // Seeded so slingshot kick variation is the same on every run.
 let randomSeed = 12345;
@@ -42,11 +44,15 @@ const testTable = async (tableName, definition) => {
   const W = definition.playfield.width, L = definition.playfield.length;
   const plungerStrength = definition.plunger.strength / TUNING.plunger.referenceStrength;
 
-  // Solid areas: inside a wall's outline, or between a rubber's outer and inner edges.
+  // Solid areas: inside a wall's outline, between a rubber's outer and inner edges, or inside a
+  // bumper.
+  const bumpers = definition.bumpers || [];
+  const spinners = definition.spinners || [];
   const solids = definition.walls.map(({ name, loops: [outer, inner] }) => ({ name, outer, inner, box: boundsOf(outer) }));
   const insideSolid = ({ x, z }) => solids.find(({ outer, inner, box }) =>
     x >= box[0] && x <= box[1] && z >= box[2] && z <= box[3] &&
-    insidePolygon(x, z, outer) && (inner === undefined || insidePolygon(x, z, inner) === false));
+    insidePolygon(x, z, outer) && (inner === undefined || insidePolygon(x, z, inner) === false)) ||
+    bumpers.find(({ center: [cx, cz], radius }) => Math.hypot(x - cx, z - cz) < radius - 0.001);
   const edges = definition.walls.flatMap(({ loops }) => loops.flatMap(loop => loop.map((p, i) => [p, loop[(i + 1) % loop.length]])));
 
   const setup = async () => {
@@ -223,6 +229,51 @@ const testTable = async (tableName, definition) => {
     report(`Slingshot ${sling.name}`, [check(exit !== null && exit > expected * 0.85, `outward speed ${exit?.toFixed(2)} m/s after a 0.8 m/s hit (kick ${expected.toFixed(2)} m/s)`)]);
   }
 
+  // Bumpers kick: a ball rolled into one from below leaves with at least the bumper's kick; with
+  // the power off (tilted) it only bounces.
+  for (const bumper of bumpers) {
+    const outward = [];
+    let fired = 0;
+    for (const powered of [true, false]) {
+      const { physics } = await setup();
+      physics.power.isOn = powered;
+      physics.events.addEventListener('bumper', () => fired++);
+      const [cx, cz] = bumper.center;
+      place(physics, { x: cx, z: cz + bumper.radius + r + 0.03 }, { x: 0, y: 0, z: -0.8 });
+      let exit = null;
+      run(physics, 0.3, () => { const v = velocityLocal(physics); if (exit === null && v.z > 0) exit = v.z; });
+      outward.push(exit);
+    }
+    const [kicked, tilted] = outward;
+    report(`Bumper ${bumper.name}`, [
+      check(kicked !== null && kicked > bumper.kickSpeed * 0.9, `kicks the ball out at ${kicked?.toFixed(2)} m/s after a 0.8 m/s hit (kick ${bumper.kickSpeed.toFixed(2)} m/s)`),
+      check(tilted !== null && tilted < kicked * 0.6, `tilted: only bounces, at ${tilted?.toFixed(2)} m/s`),
+      check(fired === 1, `fires the bumper event once, not when tilted (${fired})`)
+    ]);
+  }
+
+  // Spinners: the ball passes through and sets the plate spinning, which slows and settles.
+  for (const spinner of spinners) {
+    const { physics } = await setup();
+    const turns = [];
+    physics.events.addEventListener('spinner', ({ detail }) => turns.push(detail.name));
+    const [cx, cz] = spinner.center; const [nx, nz] = spinner.normal;
+    place(physics, { x: cx - nx * 0.05, z: cz - nz * 0.05 }, { x: nx * 1.2, y: 0, z: nz * 1.2 });
+    let crossedAt = null;
+    run(physics, 0.3, (t, p) => { if (p && crossedAt === null && (p.x - cx) * nx + (p.z - cz) * nz > 0.03) crossedAt = len(physics.ball.body.linvel()); });
+    const model = byName(physics.spinners, spinner.name);
+    const spinning = Math.abs(model.getAngle());
+    physics.ball.disable();
+    run(physics, 10);
+    const settled = model.getAngle();
+    const offVertical = Math.abs(settled - Math.round(settled / (2 * Math.PI)) * 2 * Math.PI);
+    report(`Spinner ${spinner.name}`, [
+      check(crossedAt !== null && crossedAt > 1.2 * 0.85, `the ball passes through at ${crossedAt === null ? '-' : crossedAt.toFixed(2)} m/s (entered at 1.20)`),
+      check(turns.length >= 2, `a 1.2 m/s ball spins the plate ${turns.length} full turns`),
+      check(offVertical < 0.05, `the plate settles hanging down (${deg(offVertical)} off, ${deg(spinning)} turned in the first 0.3 s)`)
+    ]);
+  }
+
   // Drains.
   for (const drain of definition.drains) {
     const { physics, state } = await setup();
@@ -255,7 +306,8 @@ const testTable = async (tableName, definition) => {
     for (let k = 0; k < cols * rows; k++) {
       const { x, z } = centre(k);
       if (Math.abs(x) > W / 2 - r || Math.abs(z) > L / 2 - r || insideSolid({ x, z })) continue;
-      free[k] = edgeBoxes.every(({ a, b, box }) => x < box[0] || x > box[1] || z < box[2] || z > box[3] || distanceToSegment(x, z, a, b) > r - contactAllowance) ? 1 : 0;
+      free[k] = edgeBoxes.every(({ a, b, box }) => x < box[0] || x > box[1] || z < box[2] || z > box[3] || distanceToSegment(x, z, a, b) > r - contactAllowance) &&
+        bumpers.every(({ center: [cx, cz], radius }) => Math.hypot(x - cx, z - cz) > radius + r - contactAllowance) ? 1 : 0;
     }
     const serve = { x: definition.plunger.tip[0], z: definition.plunger.tip[1] - r };
     let start = -1, best = Infinity;
@@ -325,7 +377,7 @@ const testTable = async (tableName, definition) => {
   {
     const { physics } = await setup();
     const seen = [];
-    ['flipper', 'slingshot', 'plunger', 'drain', 'serve', 'hit'].forEach(type =>
+    ['flipper', 'slingshot', 'bumper', 'spinner', 'plunger', 'drain', 'serve', 'hit'].forEach(type =>
       physics.events.addEventListener(type, ({ detail }) => seen.push(type === 'hit' ? `hit:${detail.kind}` : type)));
     const count = (type) => seen.filter(event => event === type).length;
     physics.serveBall();
@@ -364,6 +416,50 @@ const testTable = async (tableName, definition) => {
     for (let i = 0; i < steps; i++) { if (i % 24 === 0) physics.nudge.nudge('front'); physics.update(dt + 1e-9); }
     const nudging = (performance.now() - t0) / steps;
     report('Step cost', [`${(rolling * 1000).toFixed(1)} µs per step with the ball in play (${(rolling * 4).toFixed(3)} ms per 60 Hz frame); ${(nudging * 1000).toFixed(1)} µs while nudging`]);
+  }
+
+  // The water from the tank: it reaches every bumper, gets past the flippers, drains away, and is
+  // neither lost nor created on the way.
+  if (WATER.enabled && definition.visuals) {
+    const settings = { cellSize: WATER.cellSize, tankHeight: WATER.tank.height, tankDepth: WATER.tank.depth, gap: WATER.tank.gap, openTime: WATER.openTime, gravity: WATER.gravity };
+    const water = WaterSimulation({ definition, settings });
+    const { cols, rows, cellSize, depth, solid, state, tank } = water;
+    water.setFlippers(definition.flippers.map(({ pivot, restDirection, length, baseRadius, tipRadius }) => ({ pivot, direction: restDirection, length, baseRadius, tipRadius })));
+    const cellAt = (x, z) => Math.floor((z + L / 2) / cellSize) * cols + Math.floor((x + W / 2) / cellSize);
+    // Cells in a ring just outside each bumper, and a band just past the flipper tips.
+    const ringCells = bumpers.map(({ center: [cx, cz], radius }) => Array.from({ length: 16 }, (_, i) => {
+      const a = i / 16 * 2 * Math.PI;
+      return cellAt(cx + Math.cos(a) * (radius + 2 * cellSize), cz + Math.sin(a) * (radius + 2 * cellSize));
+    }).filter(k => !solid[k]));
+    const tipZ = Math.max(...definition.flippers.map(({ pivot: [, pz], restDirection: [, dz], length }) => pz + dz * length));
+    const pastFlippers = Array.from({ length: cols }, (_, c) => Math.floor((tipZ + 0.01 + L / 2) / cellSize) * cols + c).filter(k => !solid[k]);
+    const wetBumpers = new Set();
+    let pastFlippersAt = null, inSolid = 0, time = 0, worst = 0, total = 0;
+    water.release();
+    // Slower in lower gravity: about 30 s at real gravity.
+    const limit = 30 / Math.sqrt(WATER.gravity);
+    while (!state.finished && time < limit * 2) {
+      const t0 = performance.now();
+      water.update(1 / 60);
+      const ms = performance.now() - t0;
+      worst = Math.max(worst, ms); total += ms;
+      time += 1 / 60;
+      ringCells.forEach((cells, i) => { if (cells.some(k => depth[k] > 0.0005)) wetBumpers.add(i); });
+      if (pastFlippersAt === null && pastFlippers.some(k => depth[k] > 0.0005)) pastFlippersAt = time;
+      for (let k = 0; k < depth.length; k++) if (solid[k] && depth[k] > 0) { inSolid++; break; }
+    }
+    const { released, drained, evaporated } = state.totals;
+    const imbalance = Math.abs(released - drained - evaporated - water.waterVolume());
+    report(`Water (${(tank.volume * 1000).toFixed(1)} L tank over ${cols} x ${rows} cells of ${cellSize * 1000} mm)`, [
+      check(Math.abs(released - tank.volume) < tank.volume * 0.01, `the tank empties: ${(released * 1000).toFixed(2)} L released`),
+      check(wetBumpers.size === bumpers.length, `reaches ${wetBumpers.size} of ${bumpers.length} bumpers`),
+      check(pastFlippersAt !== null, `gets past the flippers${pastFlippersAt === null ? '' : ` after ${pastFlippersAt.toFixed(1)} s`}`),
+      check(state.finished && time < limit, `drains away in ${time.toFixed(1)} s${state.finished ? '' : ' (not finished)'}`),
+      check(drained > released * 0.95, `${(drained / released * 100).toFixed(1)}% goes down the drain, ${(evaporated / released * 100).toFixed(1)}% evaporates from puddles`),
+      check(imbalance < released * 1e-4, `no water lost or made (${(imbalance * 1e6).toFixed(2)} mL out of balance)`),
+      check(inSolid === 0, 'no water inside anything solid'),
+      `cost ${(total / (time * 60)).toFixed(2)} ms per 60 Hz frame on average, ${worst.toFixed(1)} ms at worst (in a worker in the browser)`
+    ]);
   }
 }
 

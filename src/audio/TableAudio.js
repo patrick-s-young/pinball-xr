@@ -3,6 +3,7 @@ import { TUNING } from '@physics/TUNING';
 
 // Volumes for events, as Visual Pinball's standard script plays them.
 const EVENT_VOLUME = { flipperUp: 0.67 };
+const SPINNER_VOLUME = 0.25;
 
 const pickRandom = (list) => list[Math.floor(Math.random() * list.length)];
 const clamp = (value) => Math.min(1, Math.max(0, value));
@@ -13,7 +14,7 @@ const clamp = (value) => Math.min(1, Math.max(0, value));
 // with the ball's speed. Sounds load in the background; until each has loaded it is silent.
 export const TableAudio = ({ scene, camera, physics }) => {
   const { definition, events, ball, table } = physics;
-  const { files, events: eventSounds, slingshots, hits, hitProfiles } = definition.sounds;
+  const { files, events: eventSounds, slingshots, bumpers = {}, spinners = {}, hits, hitProfiles } = definition.sounds;
   const { vpSpeedPerMetrePerSecond, masterVolume, refDistance, voices } = TUNING.audio;
 
   const listener = new THREE.AudioListener();
@@ -75,6 +76,8 @@ export const TableAudio = ({ scene, camera, physics }) => {
   events.addEventListener('drain', ({ detail }) => playEvent('drain', detail.position));
   events.addEventListener('serve', ({ detail }) => playEvent('ballRelease', detail.position));
   events.addEventListener('slingshot', ({ detail }) => slingshots[detail.name] && play(pickRandom(slingshots[detail.name]), detail.position));
+  events.addEventListener('bumper', ({ detail }) => bumpers[detail.name] && play(pickRandom(bumpers[detail.name]), detail.position));
+  events.addEventListener('spinner', ({ detail }) => spinners[detail.name] && play(pickRandom(spinners[detail.name]), detail.position, SPINNER_VOLUME));
 
   events.addEventListener('hit', ({ detail: { kind, name, speed, normalSpeed, position } }) => {
     const volume = speedVolume(speed);
